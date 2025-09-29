@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  csqaq-sampler:
+    build: .
+    container_name: csqaq-sampler
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - CSQAQ_API_KEY=${CSQAQ_API_KEY}
+      - ENVIRONMENT=production
+    env_file:
+      - .env
+    depends_on:
+      - mysql
+    networks:
+      - csqaq-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: csqaq-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: csgo_trader
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - csqaq-network
+
+volumes:
+  mysql_data:
+
+networks:
+  csqaq-network:
+    driver: bridge
