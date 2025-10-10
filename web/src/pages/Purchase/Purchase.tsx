@@ -20,7 +20,8 @@ import {
   Image,
   Tooltip,
   Typography,
-  Pagination
+  Pagination,
+  Checkbox
 } from 'antd';
 import {
   SearchOutlined,
@@ -111,6 +112,29 @@ interface MarketItem {
   CanBuy: boolean;
 }
 
+interface PurchaseOrderItem {
+  purchaseNo: string;
+  isNew: number;
+  headPicUrl: string;
+  userName: string;
+  userId: number;
+  iconUrl: string;
+  purchasePrice: number;
+  purchasePriceDesc: string;
+  commodityName: string;
+  surplusQuantity: number;
+  abradeText: any;
+  fadeText: any;
+  specialStyle: any;
+  autoReceived: number;
+  rankFirstPrice: any;
+  rankFirstPriceText: any;
+  isRankFirst: any;
+  templateId: number;
+  type: number;
+  typeId: number;
+}
+
 interface PurchaseOrder {
   OrderId: string;
   PurchasePrice: number;
@@ -136,14 +160,11 @@ const Purchase: React.FC = () => {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedItem, setSelectedItem] = useState<SearchResult | null>(null);
   const [commodityDetail, setCommodityDetail] = useState<CommodityDetail | null>(null);
-  const [marketItems, setMarketItems] = useState<MarketItem[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [purchaseOrderItems, setPurchaseOrderItems] = useState<PurchaseOrderItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [selectedWear, setSelectedWear] = useState<WearLevel | null>(null);
-  const [buyModalVisible, setBuyModalVisible] = useState(false);
   const [purchaseModalVisible, setPurchaseModalVisible] = useState(false);
-  const [selectedMarketItem, setSelectedMarketItem] = useState<MarketItem | null>(null);
+  const [selectedPurchaseOrder, setSelectedPurchaseOrder] = useState<PurchaseOrderItem | null>(null);
 
   // 分页相关状态
   const [currentKeyword, setCurrentKeyword] = useState<string>('');
@@ -211,157 +232,109 @@ const Purchase: React.FC = () => {
     }
   };
 
-  // 获取商品详情（直接获取在售商品列表）
-  const fetchCommodityDetail = async (templateId: string) => {
+  // 获取求购列表
+  const fetchPurchaseOrderList = async (templateId: number) => {
     setLoading(true);
     try {
-      const response = await axios.get(`/youpin/commodity/${templateId}`);
-      // 直接使用返回的商品列表作为市场物品
-      if (response.data && response.data.Data && response.data.Data.commodityList) {
-        setMarketItems(response.data.Data.commodityList);
-        // 构造一个简单的商品详情用于显示
-        const firstItem = response.data.Data.commodityList[0];
-        if (firstItem) {
-          setCommodityDetail({
-            TemplateId: templateId,
-            TemplateHashName: firstItem.commodityName,
-            CommodityName: firstItem.commodityName,
-            IconUrl: firstItem.iconUrl,
-            Description: '',
-            Category: 'CSGO',
-            Rarity: 'Classified',
-            Quality: 'Field-Tested',
-            WearLevels: [], // 不需要磨损选择
-            MarketSummary: {
-              TotalMarketCount: response.data.Data.commodityList.length,
-              TotalPurchaseCount: 0,
-              LowestPrice: Math.min(...response.data.Data.commodityList.map((item: any) => parseFloat(item.price) || 0)),
-              HighestPurchase: 0
-            }
-          });
-        }
-      }
-    } catch (error: any) {
-      message.error('获取商品详情失败: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 获取市场物品
-  const fetchMarketItems = async (templateId: string, minAbrade = 0, maxAbrade = 1) => {
-    setLoading(true);
-    try {
-      const response = await axios.post('/youpin/market/items', {
+      console.log('正在请求求购列表, templateId:', templateId);
+      const response = await axios.post('/youpin/purchase/list', {
         template_id: templateId,
         page_index: 1,
-        page_size: 50,
-        min_abrade: minAbrade,
-        max_abrade: maxAbrade
+        page_size: 20
       });
 
-      if (response.data.items) {
-        setMarketItems(response.data.items);
+      console.log('API 响应完整对象:', response);
+      console.log('API 响应 data:', response.data);
+      console.log('API 响应 success:', response.data.success);
+      console.log('API 响应 data.data:', response.data.data);
+      console.log('data.data 类型:', typeof response.data.data);
+      console.log('data.data 是否为数组:', Array.isArray(response.data.data));
+
+      if (response.data.success && response.data.data) {
+        console.log('设置求购订单数据, 长度:', response.data.data.length);
+        setPurchaseOrderItems(response.data.data);
+        message.success(`成功获取 ${response.data.data.length} 条求购订单`);
+      } else {
+        console.log('API 响应格式不符合预期');
+        message.warning('未获取到求购订单数据');
       }
     } catch (error: any) {
-      message.error('获取市场物品失败: ' + (error.response?.data?.error || error.message));
+      console.error('获取求购列表失败:', error);
+      message.error('获取求购列表失败: ' + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }
   };
 
-  // 获取求购订单
-  const fetchPurchaseOrders = async (templateId: string, minAbrade = 0, maxAbrade = 1) => {
-    setLoading(true);
+  // 获取商品求购信息
+  const fetchPurchaseInfo = async (templateId: string) => {
     try {
-      const response = await axios.post('/youpin/purchase/orders', {
-        template_id: templateId,
-        page_index: 1,
-        page_size: 50,
-        min_abrade: minAbrade,
-        max_abrade: maxAbrade
+      const response = await axios.post('/youpin/purchase/info', {
+        template_id: templateId
       });
-
-      if (response.data.orders) {
-        setPurchaseOrders(response.data.orders);
-      }
+      return response.data;
     } catch (error: any) {
-      message.error('获取求购订单失败: ' + (error.response?.data?.error || error.message));
-    } finally {
-      setLoading(false);
+      console.error('获取求购信息失败:', error);
+      return null;
     }
   };
 
-  // 选择商品（直接获取在售列表）
+  // 选择商品（获取求购列表）
   const handleSelectItem = async (item: SearchResult) => {
     setSelectedItem(item);
-    setSelectedWear(null);
-    setMarketItems([]);
-    setPurchaseOrders([]);
-    await fetchCommodityDetail(item.id.toString());
-  };
+    setPurchaseOrderItems([]);
 
-  // 选择磨损等级
-  const handleSelectWear = async (wear: WearLevel) => {
-    setSelectedWear(wear);
-    if (selectedItem) {
-      await Promise.all([
-        fetchMarketItems(selectedItem.id.toString(), wear.MinAbrade, wear.MaxAbrade),
-        fetchPurchaseOrders(selectedItem.id.toString(), wear.MinAbrade, wear.MaxAbrade)
-      ]);
-    }
-  };
-
-  // 直接购买
-  const handleBuyFromMarket = async (item: MarketItem) => {
-    setSelectedMarketItem(item);
-    setBuyModalVisible(true);
-  };
-
-  // 执行购买（使用余额支付）
-  const executeBuy = async () => {
-    console.log('executeBuy called, selectedMarketItem:', selectedMarketItem);
-
-    if (!selectedMarketItem) {
-      console.log('No selectedMarketItem, returning early');
-      return;
-    }
-
-    try {
-      console.log('Making API call to buy-with-balance...');
-      const priceValue = (selectedMarketItem as any).price;
-      const commodityId = (selectedMarketItem as any).commodityId;
-
-      console.log('Purchase data:', {
-        commodity_id: commodityId,
-        price: typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue,
-        payment_method: 'balance'
-      });
-
-      const response = await axios.post('/youpin/buy-with-balance', {
-        commodity_id: commodityId,
-        price: typeof priceValue === 'string' ? parseFloat(priceValue) : priceValue,
-        payment_method: 'balance'
-      });
-
-      console.log('API call successful:', response.data);
-      message.success('余额购买成功！');
-      setBuyModalVisible(false);
-
-      // 刷新市场物品列表
-      if (selectedItem && selectedWear) {
-        await fetchMarketItems(selectedItem.id.toString(), selectedWear.MinAbrade, selectedWear.MaxAbrade);
+    // 先设置一个基本的 commodityDetail，确保界面能显示
+    setCommodityDetail({
+      TemplateId: item.id.toString(),
+      TemplateHashName: item.commodityHashName || '',
+      CommodityName: item.commodityName,
+      IconUrl: item.iconUrl,
+      Description: '',
+      Category: 'CSGO',
+      Rarity: item.rarity,
+      Quality: item.quality,
+      WearLevels: [],
+      MarketSummary: {
+        TotalMarketCount: 0,
+        TotalPurchaseCount: 0,
+        LowestPrice: parseFloat(item.price || '0'),
+        HighestPurchase: 0
       }
-    } catch (error: any) {
-      console.error('Purchase failed:', error);
-      message.error('购买失败: ' + (error.response?.data?.error || error.message));
+    });
+
+    // 获取求购信息并更新详细信息
+    const purchaseInfo = await fetchPurchaseInfo(item.id.toString());
+
+    if (purchaseInfo && purchaseInfo.templateInfo) {
+      // 更新更详细的信息
+      setCommodityDetail({
+        TemplateId: item.id.toString(),
+        TemplateHashName: purchaseInfo.templateInfo.templateHashName,
+        CommodityName: purchaseInfo.templateInfo.commodityName,
+        IconUrl: purchaseInfo.templateInfo.iconUrl,
+        Description: '',
+        Category: 'CSGO',
+        Rarity: item.rarity,
+        Quality: item.quality,
+        WearLevels: [],
+        MarketSummary: {
+          TotalMarketCount: 0,
+          TotalPurchaseCount: 0,
+          LowestPrice: parseFloat(purchaseInfo.templateInfo.minSellPrice || '0'),
+          HighestPurchase: parseFloat(purchaseInfo.templateInfo.maxPurchasePrice || '0')
+        }
+      });
     }
+
+    // 获取求购列表
+    await fetchPurchaseOrderList(item.id);
   };
 
   // 创建求购订单
   const handleCreatePurchaseOrder = () => {
-    if (!selectedItem || !selectedWear) {
-      message.warning('请先选择商品和磨损等级');
+    if (!selectedItem) {
+      message.warning('请先选择商品');
       return;
     }
     setPurchaseModalVisible(true);
@@ -369,17 +342,19 @@ const Purchase: React.FC = () => {
 
   // 执行求购
   const executePurchaseOrder = async (values: any) => {
-    if (!selectedItem || !selectedWear) return;
+    if (!selectedItem || !commodityDetail) return;
 
     try {
-      await axios.post('/youpin/purchase', {
+      const response = await axios.post('/youpin/purchase', {
         template_id: selectedItem.id.toString(),
-        template_hash_name: selectedItem.commodityHashName,
-        commodity_name: selectedItem.commodityName,
+        template_hash_name: commodityDetail.TemplateHashName,
+        commodity_name: commodityDetail.CommodityName,
         purchase_price: values.price,
         purchase_num: values.quantity,
-        min_abrade: selectedWear.MinAbrade,
-        max_abrade: selectedWear.MaxAbrade
+        reference_price: commodityDetail.MarketSummary.LowestPrice.toString(),
+        min_sell_price: commodityDetail.MarketSummary.LowestPrice.toString(),
+        max_purchase_price: commodityDetail.MarketSummary.HighestPurchase.toString(),
+        auto_received: values.autoReceived || false
       });
 
       message.success('求购订单创建成功！');
@@ -387,7 +362,7 @@ const Purchase: React.FC = () => {
       form.resetFields();
 
       // 刷新求购订单列表
-      await fetchPurchaseOrders(selectedItem.id.toString(), selectedWear.MinAbrade, selectedWear.MaxAbrade);
+      await fetchPurchaseOrderList(selectedItem.id);
     } catch (error: any) {
       message.error('创建求购订单失败: ' + (error.response?.data?.error || error.message));
     }
@@ -411,7 +386,7 @@ const Purchase: React.FC = () => {
     return (
       <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
         <Title level={2}>
-          <ShoppingCartOutlined /> 悠悠有品购买中心
+          <DollarOutlined /> 悠悠有品求购中心
         </Title>
 
       {/* 搜索区域 */}
@@ -497,7 +472,7 @@ const Purchase: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 商品详情和磨损选择 */}
+        {/* 商品详情和求购列表 */}
         <Col xs={24} lg={16}>
           {commodityDetail ? (
             <Card
@@ -514,48 +489,51 @@ const Purchase: React.FC = () => {
               }
               extra={
                 <Space>
-                  <Statistic title="最低价" value={commodityDetail.MarketSummary.LowestPrice} prefix="¥" />
-                  <Statistic title="最高求购" value={commodityDetail.MarketSummary.HighestPurchase} prefix="¥" />
+                  <Statistic title="在售最低价" value={commodityDetail.MarketSummary.LowestPrice} prefix="¥" />
+                  <Statistic title="最高求购价" value={commodityDetail.MarketSummary.HighestPurchase} prefix="¥" />
+                  <Button type="primary" icon={<DollarOutlined />} onClick={handleCreatePurchaseOrder}>
+                    发布求购
+                  </Button>
                 </Space>
               }
             >
-              {/* 直接显示在售商品列表 */}
+              {/* 显示求购列表 */}
               <div>
-                <Title level={4}>在售商品 ({marketItems.length}件)</Title>
+                <Title level={4}>求购列表 ({purchaseOrderItems.length}条)</Title>
                 <Spin spinning={loading}>
-                  <List
-                    dataSource={marketItems}
-                    renderItem={(item: any) => (
-                      <List.Item
-                        actions={[
-                          <Button
-                            type="primary"
-                            icon={<DollarOutlined />}
-                            onClick={() => handleBuyFromMarket(item)}
-                            disabled={item.canSold !== 1}
-                          >
-                            余额购买
-                          </Button>
-                        ]}
-                      >
-                        <List.Item.Meta
-                          title={
-                            <Space>
-                              <Text strong>¥{item.price}</Text>
-                              <Tag color="blue">{item.exteriorName}</Tag>
-                              <Text type="secondary">磨损: {item.abrade ? parseFloat(item.abrade).toFixed(4) : 'N/A'}</Text>
-                            </Space>
-                          }
-                          description={
-                            <Space direction="vertical" size="small">
-                              <Text>卖家: {item.sellerNickname}</Text>
-                              <Text type="secondary">上架时间: {item.sellTime}</Text>
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    )}
-                  />
+                  {purchaseOrderItems.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
+                      <InfoCircleOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
+                      <div>暂无求购订单</div>
+                    </div>
+                  ) : (
+                    <List
+                      dataSource={purchaseOrderItems}
+                      renderItem={(item: PurchaseOrderItem) => (
+                          <List.Item>
+                            <List.Item.Meta
+                              avatar={<Image src={item.headPicUrl} width={48} height={48} style={{ borderRadius: '50%' }} />}
+                              title={
+                                <Space>
+                                  <Text strong>¥{item.purchasePrice}</Text>
+                                  <Tag color="green">剩余 {item.surplusQuantity} 件</Tag>
+                                  {item.autoReceived === 1 && <Tag color="blue">自动收货</Tag>}
+                                  {item.isNew === 1 && <Tag color="orange">新</Tag>}
+                                </Space>
+                              }
+                              description={
+                                <Space direction="vertical" size="small">
+                                  <Text>求购者: {item.userName}</Text>
+                                  {item.abradeText && <Text type="secondary">磨损: {item.abradeText}</Text>}
+                                  {item.fadeText && <Text type="secondary">渐变: {item.fadeText}</Text>}
+                                  {item.specialStyle && <Text type="secondary">特殊样式: {item.specialStyle}</Text>}
+                                </Space>
+                              }
+                            />
+                          </List.Item>
+                      )}
+                    />
+                  )}
                 </Spin>
               </div>
             </Card>
@@ -563,36 +541,16 @@ const Purchase: React.FC = () => {
             <Card style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ textAlign: 'center', color: '#999' }}>
                 <InfoCircleOutlined style={{ fontSize: '48px', marginBottom: '16px' }} />
-                <div>请先搜索并选择一个饰品</div>
+                <div>请先搜索并选择一个饰品查看求购列表</div>
               </div>
             </Card>
           )}
         </Col>
       </Row>
 
-      {/* 购买确认对话框 */}
-      <Modal
-        title="确认购买（余额支付）"
-        visible={buyModalVisible}
-        onOk={executeBuy}
-        onCancel={() => setBuyModalVisible(false)}
-        okText="确认余额购买"
-        cancelText="取消"
-      >
-        {selectedMarketItem && (
-          <div>
-            <p><strong>商品:</strong> {selectedItem?.commodityName}</p>
-            <p><strong>磨损:</strong> {(selectedMarketItem as any).exteriorName} ({(selectedMarketItem as any).abrade ? parseFloat((selectedMarketItem as any).abrade).toFixed(4) : 'N/A'})</p>
-            <p><strong>价格:</strong> ¥{(selectedMarketItem as any).price}</p>
-            <p><strong>卖家:</strong> {(selectedMarketItem as any).sellerNickname}</p>
-            <p><strong>支付方式:</strong> <Tag color="green">钱包余额</Tag></p>
-          </div>
-        )}
-      </Modal>
-
       {/* 求购订单对话框 */}
       <Modal
-        title="创建求购订单"
+        title="发布求购订单"
         visible={purchaseModalVisible}
         onCancel={() => setPurchaseModalVisible(false)}
         footer={null}
@@ -602,14 +560,30 @@ const Purchase: React.FC = () => {
           onFinish={executePurchaseOrder}
           layout="vertical"
         >
+          {commodityDetail && (
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '6px' }}>
+              <Space>
+                <Image src={commodityDetail.IconUrl} width={64} height={48} />
+                <div>
+                  <Text strong>{commodityDetail.CommodityName}</Text>
+                  <br />
+                  <Text type="secondary">
+                    参考价: ¥{commodityDetail.MarketSummary.LowestPrice} - ¥{commodityDetail.MarketSummary.HighestPurchase}
+                  </Text>
+                </div>
+              </Space>
+            </div>
+          )}
+
           <Form.Item
-            label="求购价格"
+            label="求购单价"
             name="price"
-            rules={[{ required: true, message: '请输入求购价格' }]}
+            rules={[{ required: true, message: '请输入求购单价' }]}
+            tooltip="建议价格不要低于在售最低价的80%，否则可能无人愿意出售"
           >
             <InputNumber
               style={{ width: '100%' }}
-              placeholder="输入求购价格"
+              placeholder="输入求购单价"
               min={0.01}
               step={0.01}
               precision={2}
@@ -626,21 +600,24 @@ const Purchase: React.FC = () => {
               style={{ width: '100%' }}
               placeholder="输入求购数量"
               min={1}
-              max={100}
+              max={999}
             />
           </Form.Item>
 
-          {selectedWear && (
-            <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '6px' }}>
-              <p><strong>磨损等级:</strong> {selectedWear.WearName}</p>
-              <p><strong>磨损范围:</strong> {selectedWear.MinAbrade ? selectedWear.MinAbrade.toFixed(4) : 'N/A'} - {selectedWear.MaxAbrade ? selectedWear.MaxAbrade.toFixed(4) : 'N/A'}</p>
-            </div>
-          )}
+          <Form.Item
+            name="autoReceived"
+            valuePropName="checked"
+            initialValue={true}
+          >
+            <Checkbox>
+              开启自动收货（推荐，收到饰品后自动确认收货）
+            </Checkbox>
+          </Form.Item>
 
           <Form.Item>
             <Space>
               <Button type="primary" htmlType="submit">
-                创建求购订单
+                发布求购
               </Button>
               <Button onClick={() => setPurchaseModalVisible(false)}>
                 取消

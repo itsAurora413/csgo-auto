@@ -1,0 +1,1391 @@
+
+2025/09/30 14:32:06 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:42 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.788ms] [33m[rows:0][35m SET FOREIGN_KEY_CHECKS=0[0m
+
+2025/09/30 14:32:06 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[231.494ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:32:06 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.534ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:32:07 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.813ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.tables WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND table_type = 'BASE TABLE'[0m
+
+2025/09/30 14:32:07 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[225.846ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:32:07 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.511ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:32:08 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.479ms] [33m[rows:-][35m SELECT * FROM `you_pin_price_snapshots` LIMIT 1[0m
+
+2025/09/30 14:32:08 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[454.693ms] [33m[rows:-][35m SELECT column_name, column_default, is_nullable = 'YES', data_type, character_maximum_length, column_type, column_key, extra, column_comment, numeric_precision, numeric_scale , datetime_precision FROM information_schema.columns WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' ORDER BY ORDINAL_POSITION[0m
+
+2025/09/30 14:32:08 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[227.099ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:32:09 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[452.728ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:32:09 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.727ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.statistics WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND index_name = 'idx_you_pin_price_snapshots_template_id'[0m
+
+2025/09/30 14:32:09 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.753ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:32:10 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.223ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:32:10 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.996ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.statistics WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND index_name = 'idx_you_pin_price_snapshots_snapshot_time'[0m
+
+2025/09/30 14:32:11 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:52 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.682ms] [33m[rows:0][35m SET FOREIGN_KEY_CHECKS=1[0m
+2025/09/30 14:32:11 Database initialized successfully
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] HEAD   /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] GET    /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
+[GIN-debug] HEAD   /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
+[GIN-debug] GET    /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
+[GIN-debug] HEAD   /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
+[GIN-debug] GET    /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] HEAD   /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] GET    /                         --> main.main.func2 (4 handlers)
+[GIN-debug] GET    /health                   --> main.main.func3 (4 handlers)
+[GIN-debug] GET    /api/v1/auth/steam/login  --> csgo-trader/internal/api.(*APIHandler).SteamLogin-fm (4 handlers)
+[GIN-debug] GET    /api/v1/auth/steam/callback --> csgo-trader/internal/api.(*APIHandler).SteamCallback-fm (4 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> csgo-trader/internal/api.(*APIHandler).Logout-fm (4 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> csgo-trader/internal/api.(*APIHandler).GetCurrentUser-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/sub/kline   --> csgo-trader/internal/api.(*APIHandler).ProxyCSQAQIndexKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods  --> csgo-trader/internal/api.(*APIHandler).InitCSQAQGoods-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/goods       --> csgo-trader/internal/api.(*APIHandler).ListCSQAQGoods-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good        --> csgo-trader/internal/api.(*APIHandler).GetCSQAQGoodDetail-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good/kline  --> csgo-trader/internal/api.(*APIHandler).GetGoodKline-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good/derived_kline --> csgo-trader/internal/api.(*APIHandler).GetGoodDerivedKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/good/snapshot --> csgo-trader/internal/api.(*APIHandler).SampleGoodSnapshot-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/recommendations --> csgo-trader/internal/api.(*APIHandler).GetPurchaseRecommendations-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods-full/start --> csgo-trader/internal/api.(*APIHandler).StartFullInit-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/init-goods-full/status --> csgo-trader/internal/api.(*APIHandler).FullInitStatus-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods-full/stop --> csgo-trader/internal/api.(*APIHandler).StopFullInit-fm (4 handlers)
+[GIN-debug] GET    /api/v1/sub/kline         --> csgo-trader/internal/api.(*APIHandler).ProxyCSQAQIndexKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/forecast/run      --> csgo-trader/internal/api.(*APIHandler).RunForecast-fm (4 handlers)
+[GIN-debug] GET    /api/v1/forecast/backtest --> csgo-trader/internal/api.(*APIHandler).BacktestForecast-fm (4 handlers)
+[GIN-debug] POST   /api/v1/forecast/backtest --> csgo-trader/internal/api.(*APIHandler).BacktestForecastPost-fm (4 handlers)
+[GIN-debug] GET    /api/v1/forecast/history  --> csgo-trader/internal/api.(*APIHandler).ListForecastHistory-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/accounts   --> csgo-trader/internal/api.(*APIHandler).AddYouPinAccount-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/accounts   --> csgo-trader/internal/api.(*APIHandler).GetYouPinAccounts-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/youpin/accounts/:id --> csgo-trader/internal/api.(*APIHandler).DeleteYouPinAccount-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/accounts/:id/reactivate --> csgo-trader/internal/api.(*APIHandler).ReactivateYouPinAccount-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/config     --> csgo-trader/internal/api.(*APIHandler).GetYouPinConfig-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/youpin/config     --> csgo-trader/internal/api.(*APIHandler).UpdateYouPinConfig-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-sell/start --> csgo-trader/internal/api.(*APIHandler).StartAutoSell-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-change-price/start --> csgo-trader/internal/api.(*APIHandler).StartAutoChangePrice-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-accept-offer/start --> csgo-trader/internal/api.(*APIHandler).StartAutoAcceptOffer-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/orders     --> csgo-trader/internal/api.(*APIHandler).GetYouPinOrders-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/inventory  --> csgo-trader/internal/api.(*APIHandler).GetYouPinInventory-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/send-sms   --> csgo-trader/internal/api.(*APIHandler).SendYouPinSMS-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/login-with-phone --> csgo-trader/internal/api.(*APIHandler).LoginYouPinWithPhone-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/search     --> csgo-trader/internal/api.(*APIHandler).SearchYouPinCommodities-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/search/items --> csgo-trader/internal/api.(*APIHandler).SearchYouPinItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/commodity/list --> csgo-trader/internal/api.(*APIHandler).GetYouPinCommodityList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/filter/config --> csgo-trader/internal/api.(*APIHandler).GetYouPinFilterConfig-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/commodity/:template_id --> csgo-trader/internal/api.(*APIHandler).GetYouPinCommodityDetails-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/market/items --> csgo-trader/internal/api.(*APIHandler).GetYouPinMarketItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/orders --> csgo-trader/internal/api.(*APIHandler).GetYouPinPurchaseOrders-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy        --> csgo-trader/internal/api.(*APIHandler).BuyFromYouPinMarket-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy-with-balance --> csgo-trader/internal/api.(*APIHandler).BuyFromYouPinMarketWithBalance-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy-multistep --> csgo-trader/internal/api.(*APIHandler).MultiStepBuyFromYouPinMarket-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase   --> csgo-trader/internal/api.(*APIHandler).CreateYouPinPurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/info --> csgo-trader/internal/api.(*APIHandler).GetTemplatePurchaseInfo-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/detail --> csgo-trader/internal/api.(*APIHandler).GetPurchaseOrderDetail-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/supply-list --> csgo-trader/internal/api.(*APIHandler).GetPurchaseSupplyList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/list --> csgo-trader/internal/api.(*APIHandler).GetTemplatePurchaseOrderList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/my-list --> csgo-trader/internal/api.(*APIHandler).SearchMyPurchaseOrderList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/delete --> csgo-trader/internal/api.(*APIHandler).DeletePurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/update --> csgo-trader/internal/api.(*APIHandler).UpdatePurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-item  --> csgo-trader/internal/api.(*APIHandler).SellYouPinItem-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/sellable-items --> csgo-trader/internal/api.(*APIHandler).GetSellableItems-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/sell-list  --> csgo-trader/internal/api.(*APIHandler).GetSellList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-by-name --> csgo-trader/internal/api.(*APIHandler).SellItemByName-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-by-index --> csgo-trader/internal/api.(*APIHandler).SellItemsByIndex-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/instant-sell --> csgo-trader/internal/api.(*APIHandler).InstantSellItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/change-price --> csgo-trader/internal/api.(*APIHandler).ChangeYouPinPrice-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/off-sale   --> csgo-trader/internal/api.(*APIHandler).OffSaleYouPinItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/arbitrage/collect-prices --> csgo-trader/internal/api.(*APIHandler).CollectPriceSnapshots-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/arbitrage/opportunities --> csgo-trader/internal/api.(*APIHandler).GetArbitrageOpportunities-fm (4 handlers)
+[GIN-debug] GET    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).GetSteamCredentials-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).UpdateSteamCredentials-fm (4 handlers)
+[GIN-debug] POST   /api/v1/steam/login       --> csgo-trader/internal/api.(*APIHandler).LoginSteamAndGetKey-fm (4 handlers)
+2025/09/30 14:32:11 Server starting on port 8080
+[GIN] 2025/09/30 - 14:32:39 | 200 |     164.625µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
+
+2025/09/30 14:32:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:793 [33mSLOW SQL >= 200ms
+[0m[31;1m[306.637ms] [33m[rows:0][35m 
+        DELETE FROM csqaq_good_snapshots
+        WHERE good_id NOT IN (
+            SELECT DISTINCT good_id FROM csqaq_goods
+        )
+    [0m
+
+2025/09/30 14:32:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:808 [33mSLOW SQL >= 200ms
+[0m[31;1m[222.907ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods`[0m
+
+2025/09/30 14:32:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:809 [33mSLOW SQL >= 200ms
+[0m[31;1m[225.648ms] [33m[rows:20][35m SELECT * FROM `csqaq_goods` ORDER BY good_id ASC LIMIT 20[0m
+
+2025/09/30 14:32:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:843 [33mSLOW SQL >= 200ms
+[0m[31;1m[483.264ms] [33m[rows:20][35m 
+            SELECT
+                s1.good_id as good_id,
+                COUNT(s2.id) as cnt,
+                MAX(s1.created_at) as last,
+                s1.yyyp_sell_price,
+                s1.buff_sell_price
+            FROM csqaq_good_snapshots s1
+            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
+            WHERE s1.good_id IN (110,111,112,113,114,1260,1357,1358,1359,1360,1443,1444,1445,1446,2541,2542,2897,2898,2899,3526)
+            AND s1.created_at = (
+                SELECT MAX(s3.created_at)
+                FROM csqaq_good_snapshots s3
+                WHERE s3.good_id = s1.good_id
+            )
+            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
+        [0m
+[GIN] 2025/09/30 - 14:32:40 | 200 |  1.239313333s |             ::1 | GET      "/api/v1/csqaq/goods?search=&page=1&page_size=20"
+[GIN] 2025/09/30 - 14:32:42 | 404 |     755.708µs |             ::1 | GET      "/manifest.json"
+[GIN] 2025/09/30 - 14:32:42 | 304 |     317.834µs |             ::1 | GET      "/static/css/main.37ea8e9a.css"
+[GIN] 2025/09/30 - 14:32:42 | 200 |    7.518708ms |             ::1 | GET      "/.well-known/appspecific/com.chrome.devtools.json"
+[GIN] 2025/09/30 - 14:32:42 | 200 |     565.875µs |             ::1 | GET      "/static/css/main.37ea8e9a.css.map"
+[GIN] 2025/09/30 - 14:32:42 | 200 |   53.643458ms |             ::1 | GET      "/static/js/main.16fffe28.js.map"
+[GIN] 2025/09/30 - 14:32:44 | 200 |      25.584µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
+Successfully bound local IP to CSQAQ API
+[GIN] 2025/09/30 - 14:32:47 | 200 |  307.045875ms |             ::1 | GET      "/api/v1/csqaq/good?id=110"
+[GIN] 2025/09/30 - 14:33:48 | 200 |    2.400417ms |             ::1 | GET      "/csqaq/goods/110"
+[GIN] 2025/09/30 - 14:33:48 | 200 |    1.063542ms |             ::1 | GET      "/static/css/main.37ea8e9a.css"
+[GIN] 2025/09/30 - 14:33:48 | 200 |     201.042µs |             ::1 | GET      "/.well-known/appspecific/com.chrome.devtools.json"
+[GIN] 2025/09/30 - 14:33:48 | 200 |    12.44125ms |             ::1 | GET      "/static/js/main.16fffe28.js"
+[GIN] 2025/09/30 - 14:33:48 | 200 |       521.5µs |             ::1 | GET      "/static/css/main.37ea8e9a.css.map"
+[GIN] 2025/09/30 - 14:33:48 | 200 |    96.27325ms |             ::1 | GET      "/static/js/main.16fffe28.js.map"
+Successfully bound local IP to CSQAQ API
+[GIN] 2025/09/30 - 14:33:48 | 404 |     102.333µs |             ::1 | GET      "/manifest.json"
+[GIN] 2025/09/30 - 14:33:48 | 200 |   81.252375ms |             ::1 | GET      "/api/v1/csqaq/good?id=110"
+
+2025/09/30 14:33:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4827 [33mSLOW SQL >= 200ms
+[0m[31;1m[456.915ms] [33m[rows:1530][35m SELECT DISTINCT `good_id` FROM `csqaq_good_snapshots`[0m
+
+2025/09/30 14:33:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[453.253ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 110 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.293ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 110 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[452.912ms] [33m[rows:36][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 110 AND created_at >= '2025-09-23 14:33:51.909' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[471.213ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 111 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.150ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 111 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[454.151ms] [33m[rows:36][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 111 AND created_at >= '2025-09-23 14:33:53.284' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.326ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 112 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.118ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 112 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.560ms] [33m[rows:36][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 112 AND created_at >= '2025-09-23 14:33:54.636' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.404ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 113 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.986ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 113 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.583ms] [33m[rows:34][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 113 AND created_at >= '2025-09-23 14:33:55.985' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.938ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 114 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.194ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 114 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.176ms] [33m[rows:34][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 114 AND created_at >= '2025-09-23 14:33:57.331' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.210ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1260 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.791ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1260 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:33:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[454.252ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1260 AND created_at >= '2025-09-23 14:33:58.682' ORDER BY created_at DESC[0m
+
+2025/09/30 14:33:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.927ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1357 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.064ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1357 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.116ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1357 AND created_at >= '2025-09-23 14:34:00.036' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.064ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1358 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.902ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1358 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.624ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1358 AND created_at >= '2025-09-23 14:34:01.383' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.792ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1359 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[472.940ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1359 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.044ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1359 AND created_at >= '2025-09-23 14:34:02.757' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.588ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1360 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.461ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1360 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.521ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1360 AND created_at >= '2025-09-23 14:34:04.106' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.104ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1443 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.918ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1443 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.219ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1443 AND created_at >= '2025-09-23 14:34:05.455' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.116ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1444 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.269ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1444 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.922ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1444 AND created_at >= '2025-09-23 14:34:06.802' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[452.678ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1445 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.814ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1445 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.266ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1445 AND created_at >= '2025-09-23 14:34:08.155' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.305ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 1446 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.882ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1446 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.885ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 1446 AND created_at >= '2025-09-23 14:34:09.504' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.770ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 2541 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.545ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2541 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.203ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2541 AND created_at >= '2025-09-23 14:34:10.857' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.594ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 2542 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.929ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2542 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[516.044ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2542 AND created_at >= '2025-09-23 14:34:12.205' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[453.365ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 2897 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.252ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2897 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.615ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2897 AND created_at >= '2025-09-23 14:34:13.625' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.469ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 2898 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.261ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2898 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.444ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2898 AND created_at >= '2025-09-23 14:34:14.974' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.181ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 2899 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.685ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2899 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.965ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 2899 AND created_at >= '2025-09-23 14:34:16.317' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.267ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3526 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.395ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3526 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.880ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3526 AND created_at >= '2025-09-23 14:34:17.658' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.007ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3527 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.245ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3527 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.219ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3527 AND created_at >= '2025-09-23 14:34:19.001' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.171ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3528 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.025ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3528 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.495ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3528 AND created_at >= '2025-09-23 14:34:20.345' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.602ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3529 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.076ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3529 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.105ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3529 AND created_at >= '2025-09-23 14:34:21.687' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.482ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3530 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.757ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3530 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.812ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3530 AND created_at >= '2025-09-23 14:34:23.03' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.118ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3586 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.721ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3586 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[477.458ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3586 AND created_at >= '2025-09-23 14:34:24.372' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.757ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3587 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.743ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3587 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.546ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3587 AND created_at >= '2025-09-23 14:34:25.746' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.322ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3588 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.341ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3588 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[452.260ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3588 AND created_at >= '2025-09-23 14:34:27.094' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.746ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 3589 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.825ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3589 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.029ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 3589 AND created_at >= '2025-09-23 14:34:28.442' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.758ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8204 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.817ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8204 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.636ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8204 AND created_at >= '2025-09-23 14:34:29.785' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.982ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8480 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.625ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8480 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.513ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8480 AND created_at >= '2025-09-23 14:34:31.132' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.794ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8481 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.280ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8481 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[532.227ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8481 AND created_at >= '2025-09-23 14:34:32.472' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.892ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8563 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.002ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8563 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.319ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8563 AND created_at >= '2025-09-23 14:34:33.898' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[476.259ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8566 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.506ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8566 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.123ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8566 AND created_at >= '2025-09-23 14:34:35.271' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.703ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8568 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.010ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8568 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.129ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8568 AND created_at >= '2025-09-23 14:34:36.619' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.033ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8569 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.027ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8569 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.664ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8569 AND created_at >= '2025-09-23 14:34:37.958' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.974ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8613 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.251ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8613 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.271ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8613 AND created_at >= '2025-09-23 14:34:39.303' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.854ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8650 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.555ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8650 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.222ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8650 AND created_at >= '2025-09-23 14:34:40.652' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.714ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8651 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.084ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8651 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.623ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8651 AND created_at >= '2025-09-23 14:34:41.994' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.507ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 8684 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[479.415ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8684 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:34:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[6300.093ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 8684 AND created_at >= '2025-09-23 14:34:43.372' ORDER BY created_at DESC[0m
+
+2025/09/30 14:34:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[3559.027ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 11550 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:35:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[9715.965ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 11550 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:35:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[12352.576ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 11550 AND created_at >= '2025-09-23 14:35:02.947' ORDER BY created_at DESC[0m
+
+2025/09/30 14:35:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[7643.126ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12170 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:35:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[13823.485ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12170 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:35:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[18716.986ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12170 AND created_at >= '2025-09-23 14:35:36.767' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[10323.069ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12171 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[13763.654ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12171 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.090ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12171 AND created_at >= '2025-09-23 14:36:19.572' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.434ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12202 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.581ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12202 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.506ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12202 AND created_at >= '2025-09-23 14:36:20.914' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.775ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12206 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.185ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12206 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.101ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12206 AND created_at >= '2025-09-23 14:36:22.258' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.616ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12253 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.244ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12253 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.666ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12253 AND created_at >= '2025-09-23 14:36:23.597' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.508ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12256 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.232ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12256 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.298ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12256 AND created_at >= '2025-09-23 14:36:24.935' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.656ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12268 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.940ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12268 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.365ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12268 AND created_at >= '2025-09-23 14:36:26.274' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.873ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12275 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.216ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12275 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.932ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12275 AND created_at >= '2025-09-23 14:36:27.613' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.861ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12277 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.470ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12277 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.829ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12277 AND created_at >= '2025-09-23 14:36:28.954' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.762ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12295 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.386ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12295 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.040ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12295 AND created_at >= '2025-09-23 14:36:30.295' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.793ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12296 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.855ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12296 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.978ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12296 AND created_at >= '2025-09-23 14:36:31.639' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.689ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12303 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.153ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12303 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.028ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12303 AND created_at >= '2025-09-23 14:36:32.979' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.188ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12306 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.710ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12306 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.183ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12306 AND created_at >= '2025-09-23 14:36:34.32' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.229ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12309 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.287ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12309 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.255ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12309 AND created_at >= '2025-09-23 14:36:35.667' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.934ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12311 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.014ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12311 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.354ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12311 AND created_at >= '2025-09-23 14:36:37.006' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.393ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12312 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.184ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12312 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.420ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12312 AND created_at >= '2025-09-23 14:36:38.344' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.709ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12313 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.849ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12313 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.856ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12313 AND created_at >= '2025-09-23 14:36:39.687' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[452.357ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12314 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.283ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12314 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.829ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12314 AND created_at >= '2025-09-23 14:36:41.036' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.390ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12317 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.304ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12317 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.554ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12317 AND created_at >= '2025-09-23 14:36:42.374' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[554.726ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12318 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[453.593ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12318 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.806ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12318 AND created_at >= '2025-09-23 14:36:43.828' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.696ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12323 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.833ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12323 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.304ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12323 AND created_at >= '2025-09-23 14:36:45.172' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.156ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12326 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.991ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12326 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.618ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12326 AND created_at >= '2025-09-23 14:36:46.514' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:47 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.219ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12328 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:47 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.653ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12328 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:48 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.963ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12328 AND created_at >= '2025-09-23 14:36:47.858' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:48 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.413ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12385 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.398ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12385 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.168ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12385 AND created_at >= '2025-09-23 14:36:49.195' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.668ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12414 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[443.925ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12414 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.587ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12414 AND created_at >= '2025-09-23 14:36:50.532' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.390ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12424 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.550ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12424 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.042ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12424 AND created_at >= '2025-09-23 14:36:51.876' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.818ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12425 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.766ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12425 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.658ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12425 AND created_at >= '2025-09-23 14:36:53.215' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.153ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12452 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.068ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12452 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.766ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12452 AND created_at >= '2025-09-23 14:36:54.558' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.926ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12465 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.353ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12465 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.922ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12465 AND created_at >= '2025-09-23 14:36:55.896' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.998ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12467 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.623ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12467 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.662ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12467 AND created_at >= '2025-09-23 14:36:57.237' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.138ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12473 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.319ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12473 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.770ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12473 AND created_at >= '2025-09-23 14:36:58.581' ORDER BY created_at DESC[0m
+
+2025/09/30 14:36:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.349ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12481 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:36:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.714ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12481 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.748ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12481 AND created_at >= '2025-09-23 14:36:59.928' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.891ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12487 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.010ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12487 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.258ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12487 AND created_at >= '2025-09-23 14:37:01.271' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.262ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12488 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.053ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12488 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[509.992ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12488 AND created_at >= '2025-09-23 14:37:02.615' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[450.329ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12490 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.717ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12490 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.041ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12490 AND created_at >= '2025-09-23 14:37:04.023' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.198ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12492 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.534ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12492 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.386ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12492 AND created_at >= '2025-09-23 14:37:05.366' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.862ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12500 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.551ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12500 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.084ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12500 AND created_at >= '2025-09-23 14:37:06.71' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.361ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12510 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.491ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12510 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.803ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12510 AND created_at >= '2025-09-23 14:37:08.053' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.688ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12515 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.810ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12515 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.856ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12515 AND created_at >= '2025-09-23 14:37:09.392' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.543ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12518 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.352ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12518 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.763ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12518 AND created_at >= '2025-09-23 14:37:10.74' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.144ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12520 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.258ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12520 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[454.496ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12520 AND created_at >= '2025-09-23 14:37:12.084' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.563ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12535 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.202ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12535 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.782ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12535 AND created_at >= '2025-09-23 14:37:13.434' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.367ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12549 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.775ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12549 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.328ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12549 AND created_at >= '2025-09-23 14:37:14.775' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.428ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12552 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.480ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12552 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.197ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12552 AND created_at >= '2025-09-23 14:37:16.117' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.341ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12559 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.962ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12559 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.115ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12559 AND created_at >= '2025-09-23 14:37:17.456' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.809ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12562 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.357ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12562 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.611ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12562 AND created_at >= '2025-09-23 14:37:18.796' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.663ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12564 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.124ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12564 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.222ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12564 AND created_at >= '2025-09-23 14:37:20.135' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.517ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12565 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.014ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12565 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.622ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12565 AND created_at >= '2025-09-23 14:37:21.474' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.930ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12569 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[446.382ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12569 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.935ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12569 AND created_at >= '2025-09-23 14:37:22.813' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[444.790ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12571 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[445.437ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12571 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.567ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12571 AND created_at >= '2025-09-23 14:37:24.154' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.248ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12576 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.903ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12576 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.030ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12576 AND created_at >= '2025-09-23 14:37:25.482' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.688ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12581 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.026ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12581 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[437.014ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12581 AND created_at >= '2025-09-23 14:37:26.784' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.253ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12586 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.618ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12586 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.406ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12586 AND created_at >= '2025-09-23 14:37:28.091' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.445ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12587 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.917ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12587 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.039ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12587 AND created_at >= '2025-09-23 14:37:29.395' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.503ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12594 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.734ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12594 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.032ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12594 AND created_at >= '2025-09-23 14:37:30.697' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.851ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12595 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.785ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12595 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.661ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12595 AND created_at >= '2025-09-23 14:37:32.002' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.444ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12598 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.744ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12598 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.471ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12598 AND created_at >= '2025-09-23 14:37:33.306' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.861ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12608 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.991ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12608 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.857ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12608 AND created_at >= '2025-09-23 14:37:34.609' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.104ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12618 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.394ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12618 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.076ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12618 AND created_at >= '2025-09-23 14:37:35.914' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.568ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12625 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.705ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12625 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.162ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12625 AND created_at >= '2025-09-23 14:37:37.218' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.280ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12626 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.619ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12626 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.785ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12626 AND created_at >= '2025-09-23 14:37:38.522' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.705ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12632 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.525ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12632 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.003ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12632 AND created_at >= '2025-09-23 14:37:39.824' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.390ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12643 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.954ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12643 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.880ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12643 AND created_at >= '2025-09-23 14:37:41.131' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.611ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12646 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.975ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12646 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.203ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12646 AND created_at >= '2025-09-23 14:37:42.438' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.155ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12649 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.167ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12649 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.432ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12649 AND created_at >= '2025-09-23 14:37:43.74' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.954ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12662 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[442.901ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12662 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.841ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12662 AND created_at >= '2025-09-23 14:37:45.052' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.338ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12664 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.507ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12664 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.796ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12664 AND created_at >= '2025-09-23 14:37:46.358' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:47 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[437.890ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12665 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:47 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.924ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12665 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:48 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.849ms] [33m[rows:33][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12665 AND created_at >= '2025-09-23 14:37:47.666' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:48 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[431.420ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12668 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:48 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.126ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12668 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.990ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12668 AND created_at >= '2025-09-23 14:37:48.967' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.319ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12670 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.895ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12670 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.534ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12670 AND created_at >= '2025-09-23 14:37:50.27' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.229ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12671 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.517ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12671 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.220ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12671 AND created_at >= '2025-09-23 14:37:51.573' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.602ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12673 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.324ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12673 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.944ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12673 AND created_at >= '2025-09-23 14:37:52.877' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.361ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12674 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.668ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12674 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.765ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12674 AND created_at >= '2025-09-23 14:37:54.182' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.090ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12681 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.669ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12681 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.010ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12681 AND created_at >= '2025-09-23 14:37:55.489' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[437.744ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12685 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.887ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12685 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.114ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12685 AND created_at >= '2025-09-23 14:37:56.796' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.626ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12686 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[442.514ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12686 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.130ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12686 AND created_at >= '2025-09-23 14:37:58.106' ORDER BY created_at DESC[0m
+
+2025/09/30 14:37:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.873ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12688 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[455.298ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12688 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:37:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.044ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12688 AND created_at >= '2025-09-23 14:37:59.429' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.647ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12695 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[462.107ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12695 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.392ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12695 AND created_at >= '2025-09-23 14:38:00.761' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.304ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12698 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.249ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12698 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[437.772ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12698 AND created_at >= '2025-09-23 14:38:02.068' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.082ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12699 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.479ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12699 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.565ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12699 AND created_at >= '2025-09-23 14:38:03.377' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.249ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12704 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:04 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.094ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12704 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.070ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12704 AND created_at >= '2025-09-23 14:38:04.681' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.568ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12708 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.873ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12708 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.284ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12708 AND created_at >= '2025-09-23 14:38:05.985' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.100ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12712 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.605ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12712 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.000ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12712 AND created_at >= '2025-09-23 14:38:07.291' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.029ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12713 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.522ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12713 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.966ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12713 AND created_at >= '2025-09-23 14:38:08.593' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.732ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12715 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.972ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12715 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.184ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12715 AND created_at >= '2025-09-23 14:38:09.895' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.807ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12717 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.743ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12717 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.998ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12717 AND created_at >= '2025-09-23 14:38:11.199' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.137ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12720 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[451.321ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12720 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.006ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12720 AND created_at >= '2025-09-23 14:38:12.521' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.008ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12722 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.066ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12722 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.713ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12722 AND created_at >= '2025-09-23 14:38:13.825' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.813ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12724 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.983ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12724 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.818ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12724 AND created_at >= '2025-09-23 14:38:15.129' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.306ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12731 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.068ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12731 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.293ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12731 AND created_at >= '2025-09-23 14:38:16.435' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[433.603ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12733 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.010ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12733 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.839ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12733 AND created_at >= '2025-09-23 14:38:17.739' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.369ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12736 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.304ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12736 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[436.876ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12736 AND created_at >= '2025-09-23 14:38:19.043' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.723ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12738 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.362ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12738 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.966ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12738 AND created_at >= '2025-09-23 14:38:20.347' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[432.820ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12739 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4861 [33mSLOW SQL >= 200ms
+[0m[31;1m[435.481ms] [33m[rows:1][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12739 ORDER BY created_at DESC,`csqaq_good_snapshots`.`id` LIMIT 1[0m
+
+2025/09/30 14:38:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4870 [33mSLOW SQL >= 200ms
+[0m[31;1m[437.563ms] [33m[rows:32][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 12739 AND created_at >= '2025-09-23 14:38:21.651' ORDER BY created_at DESC[0m
+
+2025/09/30 14:38:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4853 [33mSLOW SQL >= 200ms
+[0m[31;1m[434.084ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE good_id = 12740 ORDER BY `csqaq_goods`.`id` LIMIT 1[0m

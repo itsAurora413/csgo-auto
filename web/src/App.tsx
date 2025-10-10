@@ -8,9 +8,10 @@ import {
   LineChartOutlined,
   ShoppingCartOutlined,
   ShopOutlined,
-  DollarOutlined
+  DollarOutlined,
+  UnorderedListOutlined,
+  QuestionCircleOutlined
 } from '@ant-design/icons';
-import { QuestionCircleOutlined } from '@ant-design/icons';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Market from './pages/Market/Market';
 import Trading from './pages/Trading/Trading';
@@ -18,6 +19,8 @@ import Inventory from './pages/Inventory/Inventory';
 import Strategies from './pages/Strategies/Strategies';
 import YouPin from './pages/YouPin/YouPin';
 import Purchase from './pages/Purchase/Purchase';
+import MyPurchaseOrders from './pages/MyPurchaseOrders/MyPurchaseOrders';
+import Arbitrage from './pages/Arbitrage/Arbitrage';
 import Help from './pages/Help/Help';
 import CSQAQGoods from './pages/CSQAQGoods/CSQAQGoods';
 import GoodDetail from './pages/CSQAQGoods/GoodDetail';
@@ -69,7 +72,17 @@ function App() {
     {
       key: '/purchase',
       icon: <DollarOutlined />,
-      label: '购买中心'
+      label: '求购中心'
+    },
+    {
+      key: '/my-purchase-orders',
+      icon: <UnorderedListOutlined />,
+      label: '我的求购'
+    },
+    {
+      key: '/arbitrage',
+      icon: <LineChartOutlined />,
+      label: '套利分析'
     },
     {
       key: '/help',
@@ -113,6 +126,8 @@ function App() {
               <Route path="/strategies" element={<Strategies />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/purchase" element={<Purchase />} />
+              <Route path="/my-purchase-orders" element={<MyPurchaseOrders />} />
+              <Route path="/arbitrage" element={<Arbitrage />} />
               <Route path="/csqaq/goods" element={<CSQAQGoods />} />
               <Route path="/csqaq/goods/:id" element={<GoodDetail />} />
               <Route path="/help" element={<Help />} />

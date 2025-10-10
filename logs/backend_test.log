@@ -1,0 +1,127 @@
+
+2025/09/30 14:42:57 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:42 [33mSLOW SQL >= 200ms
+[0m[31;1m[222.497ms] [33m[rows:0][35m SET FOREIGN_KEY_CHECKS=0[0m
+
+2025/09/30 14:42:58 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.005ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:42:58 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.804ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:42:58 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.218ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.tables WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND table_type = 'BASE TABLE'[0m
+
+2025/09/30 14:42:59 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[223.437ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:42:59 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.218ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:42:59 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[222.853ms] [33m[rows:-][35m SELECT * FROM `you_pin_price_snapshots` LIMIT 1[0m
+
+2025/09/30 14:43:00 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[449.124ms] [33m[rows:-][35m SELECT column_name, column_default, is_nullable = 'YES', data_type, character_maximum_length, column_type, column_key, extra, column_comment, numeric_precision, numeric_scale , datetime_precision FROM information_schema.columns WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' ORDER BY ORDINAL_POSITION[0m
+
+2025/09/30 14:43:00 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[226.061ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:43:00 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[453.829ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:43:01 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.855ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.statistics WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND index_name = 'idx_you_pin_price_snapshots_template_id'[0m
+
+2025/09/30 14:43:01 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[223.990ms] [33m[rows:-][35m SELECT DATABASE()[0m
+
+2025/09/30 14:43:02 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[447.791ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
+
+2025/09/30 14:43:02 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:46 [33mSLOW SQL >= 200ms
+[0m[31;1m[448.024ms] [33m[rows:-][35m SELECT count(*) FROM information_schema.statistics WHERE table_schema = 'csgo_trader' AND table_name = 'you_pin_price_snapshots' AND index_name = 'idx_you_pin_price_snapshots_snapshot_time'[0m
+
+2025/09/30 14:43:02 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:52 [33mSLOW SQL >= 200ms
+[0m[31;1m[224.178ms] [33m[rows:0][35m SET FOREIGN_KEY_CHECKS=1[0m
+2025/09/30 14:43:02 Database initialized successfully
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:	export GIN_MODE=release
+ - using code:	gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] HEAD   /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
+[GIN-debug] GET    /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
+[GIN-debug] HEAD   /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
+[GIN-debug] GET    /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
+[GIN-debug] HEAD   /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
+[GIN-debug] GET    /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] HEAD   /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] GET    /                         --> main.main.func2 (4 handlers)
+[GIN-debug] GET    /health                   --> main.main.func3 (4 handlers)
+[GIN-debug] GET    /api/v1/auth/steam/login  --> csgo-trader/internal/api.(*APIHandler).SteamLogin-fm (4 handlers)
+[GIN-debug] GET    /api/v1/auth/steam/callback --> csgo-trader/internal/api.(*APIHandler).SteamCallback-fm (4 handlers)
+[GIN-debug] POST   /api/v1/auth/logout       --> csgo-trader/internal/api.(*APIHandler).Logout-fm (4 handlers)
+[GIN-debug] GET    /api/v1/auth/me           --> csgo-trader/internal/api.(*APIHandler).GetCurrentUser-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/sub/kline   --> csgo-trader/internal/api.(*APIHandler).ProxyCSQAQIndexKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods  --> csgo-trader/internal/api.(*APIHandler).InitCSQAQGoods-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/goods       --> csgo-trader/internal/api.(*APIHandler).ListCSQAQGoods-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good        --> csgo-trader/internal/api.(*APIHandler).GetCSQAQGoodDetail-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good/kline  --> csgo-trader/internal/api.(*APIHandler).GetGoodKline-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/good/derived_kline --> csgo-trader/internal/api.(*APIHandler).GetGoodDerivedKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/good/snapshot --> csgo-trader/internal/api.(*APIHandler).SampleGoodSnapshot-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/recommendations --> csgo-trader/internal/api.(*APIHandler).GetPurchaseRecommendations-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods-full/start --> csgo-trader/internal/api.(*APIHandler).StartFullInit-fm (4 handlers)
+[GIN-debug] GET    /api/v1/csqaq/init-goods-full/status --> csgo-trader/internal/api.(*APIHandler).FullInitStatus-fm (4 handlers)
+[GIN-debug] POST   /api/v1/csqaq/init-goods-full/stop --> csgo-trader/internal/api.(*APIHandler).StopFullInit-fm (4 handlers)
+[GIN-debug] GET    /api/v1/sub/kline         --> csgo-trader/internal/api.(*APIHandler).ProxyCSQAQIndexKline-fm (4 handlers)
+[GIN-debug] POST   /api/v1/forecast/run      --> csgo-trader/internal/api.(*APIHandler).RunForecast-fm (4 handlers)
+[GIN-debug] GET    /api/v1/forecast/backtest --> csgo-trader/internal/api.(*APIHandler).BacktestForecast-fm (4 handlers)
+[GIN-debug] POST   /api/v1/forecast/backtest --> csgo-trader/internal/api.(*APIHandler).BacktestForecastPost-fm (4 handlers)
+[GIN-debug] GET    /api/v1/forecast/history  --> csgo-trader/internal/api.(*APIHandler).ListForecastHistory-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/accounts   --> csgo-trader/internal/api.(*APIHandler).AddYouPinAccount-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/accounts   --> csgo-trader/internal/api.(*APIHandler).GetYouPinAccounts-fm (4 handlers)
+[GIN-debug] DELETE /api/v1/youpin/accounts/:id --> csgo-trader/internal/api.(*APIHandler).DeleteYouPinAccount-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/accounts/:id/reactivate --> csgo-trader/internal/api.(*APIHandler).ReactivateYouPinAccount-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/config     --> csgo-trader/internal/api.(*APIHandler).GetYouPinConfig-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/youpin/config     --> csgo-trader/internal/api.(*APIHandler).UpdateYouPinConfig-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-sell/start --> csgo-trader/internal/api.(*APIHandler).StartAutoSell-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-change-price/start --> csgo-trader/internal/api.(*APIHandler).StartAutoChangePrice-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/auto-accept-offer/start --> csgo-trader/internal/api.(*APIHandler).StartAutoAcceptOffer-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/orders     --> csgo-trader/internal/api.(*APIHandler).GetYouPinOrders-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/inventory  --> csgo-trader/internal/api.(*APIHandler).GetYouPinInventory-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/send-sms   --> csgo-trader/internal/api.(*APIHandler).SendYouPinSMS-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/login-with-phone --> csgo-trader/internal/api.(*APIHandler).LoginYouPinWithPhone-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/search     --> csgo-trader/internal/api.(*APIHandler).SearchYouPinCommodities-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/search/items --> csgo-trader/internal/api.(*APIHandler).SearchYouPinItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/commodity/list --> csgo-trader/internal/api.(*APIHandler).GetYouPinCommodityList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/filter/config --> csgo-trader/internal/api.(*APIHandler).GetYouPinFilterConfig-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/commodity/:template_id --> csgo-trader/internal/api.(*APIHandler).GetYouPinCommodityDetails-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/market/items --> csgo-trader/internal/api.(*APIHandler).GetYouPinMarketItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/orders --> csgo-trader/internal/api.(*APIHandler).GetYouPinPurchaseOrders-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy        --> csgo-trader/internal/api.(*APIHandler).BuyFromYouPinMarket-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy-with-balance --> csgo-trader/internal/api.(*APIHandler).BuyFromYouPinMarketWithBalance-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/buy-multistep --> csgo-trader/internal/api.(*APIHandler).MultiStepBuyFromYouPinMarket-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase   --> csgo-trader/internal/api.(*APIHandler).CreateYouPinPurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/info --> csgo-trader/internal/api.(*APIHandler).GetTemplatePurchaseInfo-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/detail --> csgo-trader/internal/api.(*APIHandler).GetPurchaseOrderDetail-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/supply-list --> csgo-trader/internal/api.(*APIHandler).GetPurchaseSupplyList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/list --> csgo-trader/internal/api.(*APIHandler).GetTemplatePurchaseOrderList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/my-list --> csgo-trader/internal/api.(*APIHandler).SearchMyPurchaseOrderList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/delete --> csgo-trader/internal/api.(*APIHandler).DeletePurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/purchase/update --> csgo-trader/internal/api.(*APIHandler).UpdatePurchaseOrder-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-item  --> csgo-trader/internal/api.(*APIHandler).SellYouPinItem-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/sellable-items --> csgo-trader/internal/api.(*APIHandler).GetSellableItems-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/sell-list  --> csgo-trader/internal/api.(*APIHandler).GetSellList-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-by-name --> csgo-trader/internal/api.(*APIHandler).SellItemByName-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/sell-by-index --> csgo-trader/internal/api.(*APIHandler).SellItemsByIndex-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/instant-sell --> csgo-trader/internal/api.(*APIHandler).InstantSellItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/change-price --> csgo-trader/internal/api.(*APIHandler).ChangeYouPinPrice-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/off-sale   --> csgo-trader/internal/api.(*APIHandler).OffSaleYouPinItems-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/arbitrage/collect-prices --> csgo-trader/internal/api.(*APIHandler).CollectPriceSnapshots-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/arbitrage/opportunities --> csgo-trader/internal/api.(*APIHandler).GetArbitrageOpportunities-fm (4 handlers)
+[GIN-debug] GET    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).GetSteamCredentials-fm (4 handlers)
+[GIN-debug] PUT    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).UpdateSteamCredentials-fm (4 handlers)
+[GIN-debug] POST   /api/v1/steam/login       --> csgo-trader/internal/api.(*APIHandler).LoginSteamAndGetKey-fm (4 handlers)
+2025/09/30 14:43:02 Server starting on port 8080

@@ -306,11 +306,26 @@ const Dashboard: React.FC = () => {
                   renderItem={(item: ArbitrageOpportunity) => (
                     <List.Item>
                       <Card className="arbitrage-card" size="small">
-                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-                          <Avatar src={item.item.icon_url} size="small" />
-                          <span style={{ marginLeft: 8, fontWeight: 'bold' }}>
-                            {item.item.name}
-                          </span>
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar src={item.item.icon_url} size="small" />
+                            <span style={{ marginLeft: 8, fontWeight: 'bold' }}>
+                              {item.item.name}
+                            </span>
+                          </div>
+                          {typeof item.score === 'number' && (
+                            <span
+                              title="综合评分（0-100）"
+                              style={{
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color:
+                                  item.score >= 80 ? '#52c41a' : item.score >= 60 ? '#1890ff' : item.score >= 40 ? '#faad14' : '#ff4d4f'
+                              }}
+                            >
+                              评分 {item.score.toFixed(0)}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <div>买入: {item.buy_platform.toUpperCase()} - ${item.buy_price.toFixed(2)}</div>

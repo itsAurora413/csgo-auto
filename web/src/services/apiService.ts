@@ -105,6 +105,7 @@ export interface ArbitrageOpportunity {
   sell_price: number;
   profit: number;
   profit_percent: number;
+  score?: number; // 综合评分（可选，后端存在则展示）
 }
 
 export interface MarketTrend {
