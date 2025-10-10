@@ -238,3 +238,93 @@ type YouPinBuyOrder struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
 }
+
+// YouPinPriceSnapshot 悠品价格快照 - 用于记录商品的历史价格
+type YouPinPriceSnapshot struct {
+	ID                uint      `json:"id" gorm:"primaryKey"`
+	TemplateID        int       `json:"template_id" gorm:"not null;index"`
+	CommodityName     string    `json:"commodity_name"`
+	HighestBuyPrice   float64   `json:"highest_buy_price"`   // 最高求购价
+	LowestSellPrice   float64   `json:"lowest_sell_price"`   // 最低在售价
+	BuyOrderCount     int       `json:"buy_order_count"`     // 求购订单数
+	SellOrderCount    int       `json:"sell_order_count"`    // 在售订单数
+	SnapshotTime      time.Time `json:"snapshot_time" gorm:"index"`
+	CreatedAt         time.Time `json:"created_at"`
+}
+
+// ArbitrageOpportunity 套利机会分析结果
+type ArbitrageOpportunity struct {
+	ID                  uint      `json:"id" gorm:"primaryKey"`
+	GoodID              int64     `json:"good_id" gorm:"index;not null"`
+	GoodName            string    `json:"good_name"`
+	CurrentBuyPrice     float64   `json:"current_buy_price"`      // 当前悠悠有品求购价
+	CurrentSellPrice    float64   `json:"current_sell_price"`     // 当前悠悠有品售价
+	ProfitRate          float64   `json:"profit_rate" gorm:"index"` // 预期利润率
+	EstimatedProfit     float64   `json:"estimated_profit"`       // 预期利润金额
+	AvgBuyPrice7d       float64   `json:"avg_buy_price_7d"`       // 7天平均求购价
+	AvgSellPrice7d      float64   `json:"avg_sell_price_7d"`      // 7天平均售价
+	PriceTrend          string    `json:"price_trend"`            // 价格趋势: up/down/stable
+	DaysOfData          int       `json:"days_of_data"`           // 拥有多少天的历史数据
+	RiskLevel           string    `json:"risk_level" gorm:"index"` // 风险等级: low/medium/high
+	BuyOrderCount       int       `json:"buy_order_count"`        // 求购订单数量
+	SellOrderCount      int       `json:"sell_order_count"`       // 在售订单数量
+	RecommendedBuyPrice float64   `json:"recommended_buy_price"`  // 推荐求购价格（略高于当前最高求购）
+	RecommendedQuantity int       `json:"recommended_quantity"`   // 推荐求购数量（基于预算和热度）
+	Score               float64   `json:"score" gorm:"index"`     // 综合评分（0-100分，量化评估模型）
+	AnalysisTime        time.Time `json:"analysis_time" gorm:"index"` // 分析时间
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
+// ArbitrageOpportunityHistory 套利机会历史归档
+type ArbitrageOpportunityHistory struct {
+    ID                  uint      `json:"id" gorm:"primaryKey"`
+    GoodID              int64     `json:"good_id" gorm:"index;not null"`
+    GoodName            string    `json:"good_name"`
+    CurrentBuyPrice     float64   `json:"current_buy_price"`
+    CurrentSellPrice    float64   `json:"current_sell_price"`
+    ProfitRate          float64   `json:"profit_rate" gorm:"index"`
+    EstimatedProfit     float64   `json:"estimated_profit"`
+    AvgBuyPrice7d       float64   `json:"avg_buy_price_7d"`
+    AvgSellPrice7d      float64   `json:"avg_sell_price_7d"`
+    PriceTrend          string    `json:"price_trend"`
+    DaysOfData          int       `json:"days_of_data"`
+    RiskLevel           string    `json:"risk_level" gorm:"index"`
+    BuyOrderCount       int       `json:"buy_order_count"`
+    SellOrderCount      int       `json:"sell_order_count"`
+    RecommendedBuyPrice float64   `json:"recommended_buy_price"`
+    RecommendedQuantity int       `json:"recommended_quantity"`
+    Score               float64   `json:"score" gorm:"index"`
+    AnalysisTime        time.Time `json:"analysis_time" gorm:"index"`
+    CreatedAt           time.Time `json:"created_at"`
+    UpdatedAt           time.Time `json:"updated_at"`
+}
+
+func (ArbitrageOpportunityHistory) TableName() string { return "arbitrage_opportunities_history" }
+
+// PurchasePlan 求购计划/清单
+type PurchasePlan struct {
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	Budget    float64   `json:"budget"`     // 总预算
+	TotalItems int      `json:"total_items"` // 总件数
+	TotalCost float64   `json:"total_cost"`  // 实际花费
+	Status    string    `json:"status" gorm:"default:'pending'"` // pending/completed/cancelled
+	Items     []PurchasePlanItem `json:"items" gorm:"foreignKey:PlanID"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// PurchasePlanItem 求购计划中的饰品明细
+type PurchasePlanItem struct {
+	ID             uint      `json:"id" gorm:"primaryKey"`
+	PlanID         uint      `json:"plan_id" gorm:"index;not null"`    // 关联的计划ID
+	GoodID         int64     `json:"good_id"`                           // CSQAQ商品ID (仅用于记录)
+	YYYPTemplateID *int64    `json:"yyyp_template_id" gorm:"index"`     // 悠悠有品模板ID (用于实际求购)
+	GoodName       string    `json:"good_name"`                         // 商品名称
+	BuyPrice       float64   `json:"buy_price"`                         // 求购价格
+	Quantity       int       `json:"quantity"`                          // 求购数量
+	Subtotal       float64   `json:"subtotal"`                          // 小计
+	ProfitRate     float64   `json:"profit_rate"`                       // 预期利润率
+	RiskLevel      string    `json:"risk_level"`                        // 风险等级
+	CreatedAt      time.Time `json:"created_at"`
+}

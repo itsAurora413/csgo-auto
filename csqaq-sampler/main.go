@@ -1,18 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"io"
-	"log"
-	"net/http"
-	"net/url"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+    "fmt"
+    "io"
+    "log"
+    "net/http"
+    "net/url"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
 
-	"csqaq-sampler/internal/config"
-	"csqaq-sampler/internal/services"
+    "csqaq-sampler/internal/config"
+    smodels "csqaq-sampler/internal/models"
+    "csqaq-sampler/internal/services"
 
 	"github.com/joho/godotenv"
 	"gorm.io/driver/mysql"
@@ -59,10 +60,10 @@ func main() {
 }
 
 func initializeDatabase(databaseURL string) (*gorm.DB, error) {
-	db, err := gorm.Open(mysql.Open(databaseURL), &gorm.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MySQL database: %w", err)
-	}
+    db, err := gorm.Open(mysql.Open(databaseURL), &gorm.Config{})
+    if err != nil {
+        return nil, fmt.Errorf("failed to connect to MySQL database: %w", err)
+    }
 
 	// Configure connection pool
 	sqlDB, err := db.DB()
@@ -75,8 +76,13 @@ func initializeDatabase(databaseURL string) (*gorm.DB, error) {
 	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	log.Println("Database initialized successfully")
-	return db, nil
+    log.Println("Database initialized successfully")
+
+    // Migration: ensure yyyp_template_id column exists
+    if err := ensureCSQAQSnapshotTemplateID(db); err != nil {
+        log.Printf("Migration warning: %v", err)
+    }
+    return db, nil
 }
 
 // CSQAQ API constants and functions
@@ -170,8 +176,37 @@ func maskAPIKey(apiKey string) string {
 }
 
 func maskDSN(dsn string) string {
-	if len(dsn) <= 20 {
-		return "****"
-	}
-	return dsn[:10] + "****" + dsn[len(dsn)-10:]
+    if len(dsn) <= 20 {
+        return "****"
+    }
+    return dsn[:10] + "****" + dsn[len(dsn)-10:]
+}
+
+// ensureCSQAQSnapshotTemplateID adds yyyp_template_id column to csqaq_good_snapshots if missing
+func ensureCSQAQSnapshotTemplateID(db *gorm.DB) error {
+    // Prefer GORM migrator checks
+    if db.Migrator().HasColumn(&smodels.CSQAQGoodSnapshot{}, "yyyp_template_id") {
+        return nil
+    }
+    // Try adding via migrator
+    if err := db.Migrator().AddColumn(&smodels.CSQAQGoodSnapshot{}, "YYYPTemplateID"); err == nil {
+        _ = db.Migrator().CreateIndex(&smodels.CSQAQGoodSnapshot{}, "YYYPTemplateID")
+        log.Println("Added column yyyp_template_id via GORM migrator")
+        return nil
+    }
+    // Fallback to raw SQL
+    var count int64
+    checkSQL := `SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'csqaq_good_snapshots' AND column_name = 'yyyp_template_id'`
+    if err := db.Raw(checkSQL).Scan(&count).Error; err != nil {
+        return fmt.Errorf("failed checking yyyp_template_id column: %w", err)
+    }
+    if count > 0 {
+        return nil
+    }
+    if err := db.Exec(`ALTER TABLE csqaq_good_snapshots ADD COLUMN yyyp_template_id BIGINT NULL`).Error; err != nil {
+        return fmt.Errorf("failed adding yyyp_template_id column: %w", err)
+    }
+    _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_cgs_yyyp_template_id ON csqaq_good_snapshots (yyyp_template_id)`).Error
+    log.Println("Added column yyyp_template_id to csqaq_good_snapshots")
+    return nil
 }

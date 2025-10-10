@@ -688,3 +688,285 @@ type SearchCommodity struct {
 	TemplatePurchaseCountText interface{} `json:"templatePurchaseCountText"`
 	TemplateTags          interface{} `json:"templateTags"`
 }
+
+// 求购相关的数据结构 - 基于HAR抓包分析
+
+// GetTemplatePurchaseInfoRequest 获取物品求购信息请求
+type GetTemplatePurchaseInfoRequest struct {
+	TemplateId string `json:"templateId" binding:"required"`
+}
+
+// GetTemplatePurchaseInfoResponse 获取物品求购信息响应
+type GetTemplatePurchaseInfoResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		PurchaseInfo struct {
+			MinPrice               string `json:"minPrice"`
+			MaxPrice               string `json:"maxPrice"`
+			Quantity               int    `json:"quantity"`
+			PageMarkUpContent      string `json:"pageMarkUpContent"`
+			PageBlackMarkUpContent string `json:"pageBlackMarkUpContent"`
+			AutoReceived           bool   `json:"autoReceived"`
+			CheckMinPrice          string `json:"checkMinPrice"`
+			CheckMaxPrice          string `json:"checkMaxPrice"`
+		} `json:"purchaseInfo"`
+		TemplateInfo struct {
+			TemplateId       int     `json:"templateId"`
+			TemplateHashName string  `json:"templateHashName"`
+			CommodityName    string  `json:"commodityName"`
+			IconUrl          string  `json:"iconUrl"`
+			ReferencePrice   string  `json:"referencePrice"`
+			MinSellPrice     string  `json:"minSellPrice"`
+			MaxPurchasePrice string  `json:"maxPurchasePrice"`
+		} `json:"templateInfo"`
+	} `json:"data"`
+}
+
+// PrePurchaseOrderCheckRequest 预检查求购订单请求
+type PrePurchaseOrderCheckRequest struct {
+	SpecialStyleObj      map[string]interface{} `json:"specialStyleObj"`
+	IsCheckMaxPrice      bool                   `json:"isCheckMaxPrice"`
+	TemplateHashName     string                 `json:"templateHashName" binding:"required"`
+	TotalAmount          float64                `json:"totalAmount" binding:"required"`
+	ReferencePrice       string                 `json:"referencePrice"`
+	PurchasePrice        float64                `json:"purchasePrice" binding:"required"`
+	PurchaseNum          int                    `json:"purchaseNum" binding:"required"`
+	DiscountAmount       float64                `json:"discountAmount"`
+	MinSellPrice         float64                `json:"minSellPrice"`
+	MaxPurchasePrice     float64                `json:"maxPurchasePrice"`
+	TemplateId           string                 `json:"templateId" binding:"required"`
+	IncrementServiceCode []int                  `json:"incrementServiceCode,omitempty"` // 1001表示开启自动收货
+}
+
+// PrePurchaseOrderCheckResponse 预检查求购订单响应
+type PrePurchaseOrderCheckResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		PurchasePrice       float64 `json:"purchasePrice"`
+		PurchaseNum         int     `json:"purchaseNum"`
+		NeedPaymentAmount   float64 `json:"needPaymentAmount"`
+		TotalAmount         float64 `json:"totalAmount"`
+		TemplateName        string  `json:"templateName"`
+		TemplateHashName    string  `json:"templateHashName"`
+		PriceDifference     float64 `json:"priceDifference"`
+	} `json:"data"`
+}
+
+// SavePurchaseOrderRequest 创建求购订单请求
+type SavePurchaseOrderRequest struct {
+	TemplateId            int     `json:"templateId" binding:"required"`
+	TemplateHashName      string  `json:"templateHashName" binding:"required"`
+	CommodityName         string  `json:"commodityName" binding:"required"`
+	ReferencePrice        string  `json:"referencePrice"`
+	MinSellPrice          string  `json:"minSellPrice"`
+	MaxPurchasePrice      string  `json:"maxPurchasePrice"`
+	PurchasePrice         float64 `json:"purchasePrice" binding:"required"`
+	PurchaseNum           int     `json:"purchaseNum" binding:"required"`
+	NeedPaymentAmount     float64 `json:"needPaymentAmount" binding:"required"`
+	IncrementServiceCode  []int   `json:"incrementServiceCode,omitempty"` // 1001表示开启自动收货
+	TotalAmount           float64 `json:"totalAmount" binding:"required"`
+	TemplateName          string  `json:"templateName"`
+	PriceDifference       float64 `json:"priceDifference"`
+	DiscountAmount        float64 `json:"discountAmount"`
+	PayConfirmFlag        bool    `json:"payConfirmFlag"`
+	RepeatOrderCancelFlag bool    `json:"repeatOrderCancelFlag"`
+}
+
+// SavePurchaseOrderResponse 创建求购订单响应
+type SavePurchaseOrderResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		OrderNo       string `json:"orderNo"`
+		PayOrderNo    string `json:"payOrderNo"`
+		PurchaseNo    string `json:"purchaseNo"`
+	} `json:"data"`
+}
+
+// GetPurchaseOrderDetailRequest 获取求购订单详情请求
+type GetPurchaseOrderDetailRequest struct {
+	OrderNo string `json:"orderNo" binding:"required"`
+}
+
+// GetPurchaseOrderDetailResponse 获取求购订单详情响应
+type GetPurchaseOrderDetailResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		OrderNo           string `json:"orderNo"`
+		TemplateId        int    `json:"templateId"`
+		CommodityName     string `json:"commodityName"`
+		UnitPrice         string `json:"unitPrice"`
+		IconUrl           string `json:"iconUrl"`
+		BuyQuantity       int    `json:"buyQuantity"`
+		Quantity          int    `json:"quantity"`
+		Status            int    `json:"status"`
+		StatusText        string `json:"statusText"`
+		StatusTextColor   string `json:"statusTextColor"`
+		CreateTime        string `json:"createTime"`
+		UpdateTime        string `json:"updateTime"`
+		PayTypeText       string `json:"payTypeText"`
+		TotalPrice        string `json:"totalPrice"`
+		Rank              string `json:"rank"`
+		MaxPurchasePrice  string `json:"maxPurchasePrice"`
+	} `json:"data"`
+}
+
+// GetPurchaseSupplyOrderListRequest 获取求购供应订单列表请求
+type GetPurchaseSupplyOrderListRequest struct {
+	PurchaseNo string `json:"purchaseNo" binding:"required"`
+}
+
+// GetPurchaseSupplyOrderListResponse 获取求购供应订单列表响应
+type GetPurchaseSupplyOrderListResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      []interface{} `json:"data"`
+}
+
+// GetTemplatePurchaseOrderListRequest 获取物品求购列表请求
+type GetTemplatePurchaseOrderListRequest struct {
+	PageIndex         int    `json:"pageIndex"`
+	PageSize          int    `json:"pageSize"`
+	ShowMaxPriceFlag  bool   `json:"showMaxPriceFlag"`
+	TemplateId        int    `json:"templateId" binding:"required"`
+}
+
+// PurchaseOrderItem 求购订单项
+type PurchaseOrderItem struct {
+	PurchaseNo       string      `json:"purchaseNo"`
+	IsNew            int         `json:"isNew"`
+	HeadPicUrl       string      `json:"headPicUrl"`
+	UserName         string      `json:"userName"`
+	UserId           int         `json:"userId"`
+	IconUrl          string      `json:"iconUrl"`
+	PurchasePrice    float64     `json:"purchasePrice"`
+	PurchasePriceDesc string     `json:"purchasePriceDesc"`
+	CommodityName    string      `json:"commodityName"`
+	SurplusQuantity  int         `json:"surplusQuantity"`
+	AbradeText       interface{} `json:"abradeText"`
+	FadeText         interface{} `json:"fadeText"`
+	SpecialStyle     interface{} `json:"specialStyle"`
+	AutoReceived     int         `json:"autoReceived"`
+	RankFirstPrice   interface{} `json:"rankFirstPrice"`
+	RankFirstPriceText interface{} `json:"rankFirstPriceText"`
+	IsRankFirst      interface{} `json:"isRankFirst"`
+	TemplateId       int         `json:"templateId"`
+	Type             int         `json:"type"`
+	TypeId           int         `json:"typeId"`
+}
+
+// GetTemplatePurchaseOrderListResponse 获取物品求购列表响应
+type GetTemplatePurchaseOrderListResponse struct {
+	Code      int                 `json:"code"`
+	Msg       string              `json:"msg"`
+	Timestamp int64               `json:"timestamp"`
+	Data      []PurchaseOrderItem `json:"data"`
+}
+
+// SearchPurchaseOrderListRequest 搜索当前账号的求购列表请求
+type SearchPurchaseOrderListRequest struct {
+	PageIndex int    `json:"pageIndex"`
+	PageSize  int    `json:"pageSize"`
+	Status    int    `json:"status,omitempty"` // 20表示求购中，可选参数
+	Sessionid string `json:"Sessionid"`
+}
+
+// MyPurchaseOrderItem 我的求购订单项
+type MyPurchaseOrderItem struct {
+	IsNew                  int         `json:"isNew"`
+	OrderNo                string      `json:"orderNo"`
+	TemplateId             int         `json:"templateId"`
+	CommodityName          string      `json:"commodityName"`
+	IconUrl                string      `json:"iconUrl"`
+	UnitPrice              string      `json:"unitPrice"`
+	StyleSpecial           interface{} `json:"styleSpecial"`
+	AbradeText             interface{} `json:"abradeText"`
+	FadeText               interface{} `json:"fadeText"`
+	BuyQuantity            int         `json:"buyQuantity"`
+	Quantity               int         `json:"quantity"`
+	MaxPurchasePrice       string      `json:"maxPurchasePrice"`
+	AutoReceived           int         `json:"autoReceived"`
+	Rank                   string      `json:"rank"`
+	Status                 int         `json:"status"`
+	StatusText             string      `json:"statusText"`
+	StatusTextColor        string      `json:"statusTextColor"`
+	CreateTime             string      `json:"createTime"`
+	CountDownTime          interface{} `json:"countDownTime"`
+	LastPriceUpdateTime    interface{} `json:"lastPriceUpdateTime"`
+	CheckPriceMessage      interface{} `json:"checkPriceMessage"`
+}
+
+// SearchPurchaseOrderListResponse 搜索当前账号的求购列表响应
+type SearchPurchaseOrderListResponse struct {
+	Code      int                   `json:"code"`
+	Msg       string                `json:"msg"`
+	Timestamp int64                 `json:"timestamp"`
+	Data      []MyPurchaseOrderItem `json:"data"`
+}
+
+// DeletePurchaseOrderRequest 删除求购订单请求
+type DeletePurchaseOrderRequest struct {
+	OrderNoList []string `json:"orderNoList" binding:"required"`
+	Sessionid   string   `json:"Sessionid"`
+}
+
+// DeletePurchaseOrderResponse 删除求购订单响应
+type DeletePurchaseOrderResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		SuccessCount interface{} `json:"successCount"`
+		FailCount    interface{} `json:"failCount"`
+		TotalCount   interface{} `json:"totalCount"`
+		BizCode      interface{} `json:"bizCode"`
+		BizMsg       interface{} `json:"bizMsg"`
+		Status       bool        `json:"status"`
+	} `json:"data"`
+}
+
+// UpdatePurchaseOrderRequest 修改求购订单请求
+type UpdatePurchaseOrderRequest struct {
+	TemplateId            int     `json:"templateId" binding:"required"`
+	TemplateHashName      string  `json:"templateHashName" binding:"required"`
+	CommodityName         string  `json:"commodityName" binding:"required"`
+	ReferencePrice        string  `json:"referencePrice"`
+	MinSellPrice          string  `json:"minSellPrice"`
+	MaxPurchasePrice      string  `json:"maxPurchasePrice"`
+	PurchasePrice         float64 `json:"purchasePrice" binding:"required"`
+	PurchaseNum           int     `json:"purchaseNum" binding:"required"`
+	NeedPaymentAmount     float64 `json:"needPaymentAmount" binding:"required"`
+	IncrementServiceCode  []int   `json:"incrementServiceCode,omitempty"` // 1001表示开启自动收货
+	TotalAmount           float64 `json:"totalAmount" binding:"required"`
+	TemplateName          string  `json:"templateName"`
+	PriceDifference       float64 `json:"priceDifference"`
+	OrderNo               string  `json:"orderNo" binding:"required"`
+	DiscountAmount        float64 `json:"discountAmount"`
+	SupplyQuantity        int     `json:"supplyQuantity"`
+	PayConfirmFlag        bool    `json:"payConfirmFlag"`
+	RepeatOrderCancelFlag bool    `json:"repeatOrderCancelFlag"`
+}
+
+// UpdatePurchaseOrderResponse 修改求购订单响应
+type UpdatePurchaseOrderResponse struct {
+	Code      int    `json:"code"`
+	Msg       string `json:"msg"`
+	Timestamp int64  `json:"timestamp"`
+	Data      struct {
+		UpdateFlag      bool        `json:"updateFlag"`
+		MoneyEnoughFlag interface{} `json:"moneyEnoughFlag"`
+		NeedPayAmount   interface{} `json:"needPayAmount"`
+		PayOrderNo      interface{} `json:"payOrderNo"`
+		PurchaseNo      string      `json:"purchaseNo"`
+		Code            interface{} `json:"code"`
+		Msg             interface{} `json:"msg"`
+	} `json:"data"`
+}

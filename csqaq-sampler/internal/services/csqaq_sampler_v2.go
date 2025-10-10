@@ -41,15 +41,18 @@ type SamplerStats struct {
 }
 
 type goodResp struct {
-	Code int64 `json:"code"`
-	Data struct {
-		GoodsInfo struct {
-			YyypSellPrice float64 `json:"yyyp_sell_price"`
-			YyypBuyPrice  float64 `json:"yyyp_buy_price"`
-			BuffSellPrice float64 `json:"buff_sell_price"`
-			BuffBuyPrice  float64 `json:"buff_buy_price"`
-		} `json:"goods_info"`
-	} `json:"data"`
+    Code int64 `json:"code"`
+    Data struct {
+        GoodsInfo struct {
+            YyypSellPrice float64 `json:"yyyp_sell_price"`
+            YyypBuyPrice  float64 `json:"yyyp_buy_price"`
+            YyypSellNum   int     `json:"yyyp_sell_num"` // 悠悠有品在售数量
+            YyypBuyNum    int     `json:"yyyp_buy_num"`  // 悠悠有品求购数量
+            BuffSellPrice float64 `json:"buff_sell_price"`
+            BuffBuyPrice  float64 `json:"buff_buy_price"`
+            YyypID         int64   `json:"yyyp_id"`
+        } `json:"goods_info"`
+    } `json:"data"`
 }
 
 // NewEnhancedCSQAQSampler creates a new enhanced sampler with precise timing
@@ -360,25 +363,38 @@ func (s *EnhancedCSQAQSampler) processGoodWithRetry(goodID int64, retryCount *in
 
 // saveSnapshot saves price snapshot to database with retry
 func (s *EnhancedCSQAQSampler) saveSnapshot(goodID int64, gi struct {
-	YyypSellPrice float64 `json:"yyyp_sell_price"`
-	YyypBuyPrice  float64 `json:"yyyp_buy_price"`
-	BuffSellPrice float64 `json:"buff_sell_price"`
-	BuffBuyPrice  float64 `json:"buff_buy_price"`
+    YyypSellPrice float64 `json:"yyyp_sell_price"`
+    YyypBuyPrice  float64 `json:"yyyp_buy_price"`
+    YyypSellNum   int     `json:"yyyp_sell_num"`
+    YyypBuyNum    int     `json:"yyyp_buy_num"`
+    BuffSellPrice float64 `json:"buff_sell_price"`
+    BuffBuyPrice  float64 `json:"buff_buy_price"`
+    YyypID         int64   `json:"yyyp_id"`
 }) bool {
-	snap := models.CSQAQGoodSnapshot{
-		GoodID:    goodID,
-		CreatedAt: time.Now(),
-	}
+    snap := models.CSQAQGoodSnapshot{
+        GoodID:    goodID,
+        CreatedAt: time.Now(),
+    }
 
 	// Convert to pointers for nullable fields
 	yyypSell := gi.YyypSellPrice
 	snap.YYYPSellPrice = &yyypSell
 	yyypBuy := gi.YyypBuyPrice
 	snap.YYYPBuyPrice = &yyypBuy
+	yyypSellCount := gi.YyypSellNum
+	snap.YYYPSellCount = &yyypSellCount
+	yyypBuyCount := gi.YyypBuyNum
+	snap.YYYPBuyCount = &yyypBuyCount
 	buffSell := gi.BuffSellPrice
 	snap.BuffSellPrice = &buffSell
-	buffBuy := gi.BuffBuyPrice
-	snap.BuffBuyPrice = &buffBuy
+    buffBuy := gi.BuffBuyPrice
+    snap.BuffBuyPrice = &buffBuy
+
+    // Set YouPin id (yyyp_id from API) into snapshot.YYYPTemplateID
+    if gi.YyypID > 0 {
+        tpl := gi.YyypID
+        snap.YYYPTemplateID = &tpl
+    }
 
 	// 数据库操作重试
 	for attempt := 0; attempt < 3; attempt++ {

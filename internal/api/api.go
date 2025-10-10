@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"context"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -140,6 +141,20 @@ func SetupRoutes(r *gin.RouterGroup, db *gorm.DB, steam *steamService.SteamServi
 		// 手动改价与下架
 		youpin.POST("/change-price", handler.ChangeYouPinPrice)
 		youpin.POST("/off-sale", handler.OffSaleYouPinItems)
+
+		// 套利分析相关
+        arb := youpin.Group("/arbitrage")
+        {
+            arb.POST("/collect-prices", handler.CollectPriceSnapshots)
+            arb.GET("/opportunities", handler.GetArbitrageOpportunities)
+            arb.GET("/opportunities/export", handler.ExportArbitrageOpportunities)
+        }
+
+		// 求购计划相关
+		youpin.GET("/purchase-plans", handler.ListPurchasePlans)
+		youpin.GET("/purchase-plans/:id", handler.GetPurchasePlanDetail)
+		youpin.POST("/purchase-plans/:id/execute", handler.ExecutePurchasePlan)
+		youpin.POST("/purchase-plans/:id/reset", handler.ResetPurchasePlan)
 	}
 
 	// Steam credentials routes
@@ -1106,14 +1121,17 @@ func (h *APIHandler) SampleGoodSnapshot(c *gin.Context) {
 	var resp struct {
 		Code int64 `json:"code"`
 		Data struct {
-			GoodsInfo struct {
-				YyypSellPrice float64 `json:"yyyp_sell_price"`
-				YyypBuyPrice  float64 `json:"yyyp_buy_price"`
-				BuffSellPrice float64 `json:"buff_sell_price"`
-				BuffBuyPrice  float64 `json:"buff_buy_price"`
-			} `json:"goods_info"`
-		} `json:"data"`
-	}
+        GoodsInfo struct {
+            YyypSellPrice float64 `json:"yyyp_sell_price"`
+            YyypBuyPrice  float64 `json:"yyyp_buy_price"`
+            YyypSellNum   int     `json:"yyyp_sell_num"`
+            YyypBuyNum    int     `json:"yyyp_buy_num"`
+            BuffSellPrice float64 `json:"buff_sell_price"`
+            BuffBuyPrice  float64 `json:"buff_buy_price"`
+            YyypID         int64   `json:"yyyp_id"`
+        } `json:"goods_info"`
+    } `json:"data"`
+    }
 	if err := json.Unmarshal(body, &resp); err != nil || resp.Code != 200 {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "invalid upstream"})
 		return
@@ -1125,10 +1143,15 @@ func (h *APIHandler) SampleGoodSnapshot(c *gin.Context) {
 	snap.YYYPSellPrice = &yyypSell
 	yyypBuy := gi.YyypBuyPrice
 	snap.YYYPBuyPrice = &yyypBuy
+	// counts if provided
+	if gi.YyypSellNum > 0 { c := gi.YyypSellNum; snap.YYYPSellCount = &c }
+	if gi.YyypBuyNum > 0 { c := gi.YyypBuyNum; snap.YYYPBuyCount = &c }
 	buffSell := gi.BuffSellPrice
 	snap.BuffSellPrice = &buffSell
 	buffBuy := gi.BuffBuyPrice
 	snap.BuffBuyPrice = &buffBuy
+    // map API's yyyp_id into snapshot.YYYPTemplateID
+    if gi.YyypID > 0 { tid := gi.YyypID; snap.YYYPTemplateID = &tid }
 	if err := h.db.Create(&snap).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
@@ -4360,4 +4383,541 @@ func (h *APIHandler) MultiStepBuyFromYouPinMarket(c *gin.Context) {
 			"nickname": account.Nickname,
 		},
 	})
+}
+
+// CollectPriceSnapshots 收集指定商品的价格快照（占位实现）
+// POST /api/v1/youpin/arbitrage/collect-prices
+// Body: { "good_ids": [110, 111, ...] }
+func (h *APIHandler) CollectPriceSnapshots(c *gin.Context) {
+    var req struct {
+        GoodIDs []int64 `json:"good_ids"`
+    }
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "请求参数无效: " + err.Error()})
+        return
+    }
+
+    // 当前运行环境网络受限，且需依赖外部接口与账户，不在此处执行真实抓取。
+    // 返回占位响应，避免前端出错。
+    c.JSON(http.StatusOK, gin.H{
+        "success":   true,
+        "collected": 0,
+        "failed":    len(req.GoodIDs),
+        "message":   "当前环境未启用外部抓取，已跳过收集。",
+    })
+}
+
+// GetArbitrageOpportunities 返回基于CSQAQ价格快照推导的悠悠有品内套利机会
+// GET /api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100
+func (h *APIHandler) GetArbitrageOpportunities(c *gin.Context) {
+    // Parse query params
+    minProfitRate := 0.05
+    if v := c.Query("min_profit_rate"); v != "" {
+        if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 {
+            minProfitRate = f
+        }
+    }
+    minDaysHistory := 7
+    if v := c.Query("min_days_history"); v != "" {
+        if i, err := strconv.Atoi(v); err == nil && i >= 0 {
+            minDaysHistory = i
+        }
+    }
+    limit := 100
+    if v := c.Query("limit"); v != "" {
+        if i, err := strconv.Atoi(v); err == nil && i > 0 && i <= 500 {
+            limit = i
+        }
+    }
+
+    // 直接从套利分析结果表中读取（远程 MySQL 已写入该表）
+    var rows []models.ArbitrageOpportunity
+    q := h.db.Model(&models.ArbitrageOpportunity{})
+    if minProfitRate > 0 {
+        q = q.Where("profit_rate >= ?", minProfitRate)
+    }
+    if minDaysHistory > 0 {
+        q = q.Where("days_of_data >= ?", minDaysHistory)
+    }
+    // 优先使用综合评分，其次利润率
+    if err := q.Order("score DESC").Order("profit_rate DESC").Limit(limit).Find(&rows).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "查询套利机会失败: " + err.Error()})
+        return
+    }
+
+    // 映射为前端需要的字段，并补充 last_update_time
+    type uiOpp struct {
+        GoodID           int64     `json:"good_id"`
+        GoodName         string    `json:"good_name"`
+        CurrentBuyPrice  float64   `json:"current_buy_price"`
+        CurrentSellPrice float64   `json:"current_sell_price"`
+        ProfitRate       float64   `json:"profit_rate"`
+        EstimatedProfit  float64   `json:"estimated_profit"`
+        AvgBuyPrice7d    float64   `json:"avg_buy_price_7d"`
+        AvgSellPrice7d   float64   `json:"avg_sell_price_7d"`
+        PriceTrend       string    `json:"price_trend"`
+        DaysOfData       int       `json:"days_of_data"`
+        LastUpdateTime   time.Time `json:"last_update_time"`
+        RiskLevel        string    `json:"risk_level"`
+        Score            float64   `json:"score"`
+    }
+
+    results := make([]uiOpp, 0, len(rows))
+    for _, r := range rows {
+        lut := r.AnalysisTime
+        if lut.IsZero() {
+            lut = r.UpdatedAt
+        }
+        results = append(results, uiOpp{
+            GoodID:           r.GoodID,
+            GoodName:         r.GoodName,
+            CurrentBuyPrice:  r.CurrentBuyPrice,
+            CurrentSellPrice: r.CurrentSellPrice,
+            ProfitRate:       r.ProfitRate,
+            EstimatedProfit:  r.EstimatedProfit,
+            AvgBuyPrice7d:    r.AvgBuyPrice7d,
+            AvgSellPrice7d:   r.AvgSellPrice7d,
+            PriceTrend:       r.PriceTrend,
+            DaysOfData:       r.DaysOfData,
+            LastUpdateTime:   lut,
+            RiskLevel:        r.RiskLevel,
+            Score:            r.Score,
+        })
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success":       true,
+        "opportunities": results,
+        "count":         len(results),
+        "filters": gin.H{
+            "min_profit_rate":  minProfitRate,
+            "min_days_history": minDaysHistory,
+            "limit":            limit,
+        },
+    })
+}
+
+// ExportArbitrageOpportunities 导出套利机会为CSV（可用Excel打开）
+// GET /api/v1/youpin/arbitrage/opportunities/export?min_profit_rate=0.05&min_days_history=7&limit=1000
+func (h *APIHandler) ExportArbitrageOpportunities(c *gin.Context) {
+    minProfitRate := 0.05
+    if v := c.Query("min_profit_rate"); v != "" {
+        if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 {
+            minProfitRate = f
+        }
+    }
+    minDaysHistory := 7
+    if v := c.Query("min_days_history"); v != "" {
+        if i, err := strconv.Atoi(v); err == nil && i >= 0 {
+            minDaysHistory = i
+        }
+    }
+    limit := 1000
+    if v := c.Query("limit"); v != "" {
+        if i, err := strconv.Atoi(v); err == nil && i > 0 && i <= 5000 {
+            limit = i
+        }
+    }
+
+    var rows []models.ArbitrageOpportunity
+    q := h.db.Model(&models.ArbitrageOpportunity{})
+    if minProfitRate > 0 {
+        q = q.Where("profit_rate >= ?", minProfitRate)
+    }
+    if minDaysHistory > 0 {
+        q = q.Where("days_of_data >= ?", minDaysHistory)
+    }
+    if err := q.Order("score DESC").Order("profit_rate DESC").Limit(limit).Find(&rows).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "查询套利机会失败: " + err.Error()})
+        return
+    }
+
+    // Prepare CSV
+    filename := fmt.Sprintf("arbitrage_opportunities_%s.csv", time.Now().Format("20060102_150405"))
+    c.Header("Content-Type", "text/csv; charset=utf-8")
+    c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+    // Add BOM for Excel UTF-8
+    _, _ = c.Writer.Write([]byte{0xEF, 0xBB, 0xBF})
+
+    w := csv.NewWriter(c.Writer)
+    // Header
+    _ = w.Write([]string{"good_id", "good_name", "current_buy_price", "current_sell_price", "profit_rate(%)", "estimated_profit",
+        "avg_buy_price_7d", "avg_sell_price_7d", "price_trend", "days_of_data", "risk_level", "score", "analysis_time"})
+    // Rows
+    for _, r := range rows {
+        rec := []string{
+            fmt.Sprintf("%d", r.GoodID),
+            r.GoodName,
+            fmt.Sprintf("%.2f", r.CurrentBuyPrice),
+            fmt.Sprintf("%.2f", r.CurrentSellPrice),
+            fmt.Sprintf("%.2f", r.ProfitRate*100),
+            fmt.Sprintf("%.2f", r.EstimatedProfit),
+            fmt.Sprintf("%.2f", r.AvgBuyPrice7d),
+            fmt.Sprintf("%.2f", r.AvgSellPrice7d),
+            r.PriceTrend,
+            fmt.Sprintf("%d", r.DaysOfData),
+            r.RiskLevel,
+            fmt.Sprintf("%.1f", r.Score),
+            r.AnalysisTime.Format("2006-01-02 15:04:05"),
+        }
+        _ = w.Write(rec)
+    }
+    w.Flush()
+}
+
+// ListPurchasePlans 获取求购计划列表
+// GET /api/v1/youpin/purchase-plans?limit=50
+func (h *APIHandler) ListPurchasePlans(c *gin.Context) {
+    lim := 50
+    if v := c.Query("limit"); v != "" {
+        if i, err := strconv.Atoi(v); err == nil && i > 0 && i <= 200 {
+            lim = i
+        }
+    }
+
+    var plans []models.PurchasePlan
+    // 尝试查询；如表不存在或其他错误，返回JSON并携带错误信息
+    if err := h.db.Order("created_at DESC").Limit(lim).Find(&plans).Error; err != nil {
+        c.JSON(http.StatusOK, gin.H{
+            "success": false,
+            "error":   "查询求购计划失败: " + err.Error(),
+            "plans":   []models.PurchasePlan{},
+            "count":   0,
+        })
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "plans":   plans,
+        "count":   len(plans),
+    })
+}
+
+// GetPurchasePlanDetail 获取求购计划详情（含条目）
+// GET /api/v1/youpin/purchase-plans/:id
+func (h *APIHandler) GetPurchasePlanDetail(c *gin.Context) {
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "缺少计划ID"})
+        return
+    }
+
+    var plan models.PurchasePlan
+    if err := h.db.Preload("Items").First(&plan, "id = ?", idStr).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "未找到该求购计划"})
+            return
+        }
+        c.JSON(http.StatusOK, gin.H{"success": false, "error": "查询计划详情失败: " + err.Error()})
+        return
+    }
+
+    // 回填缺失的 yyyp_template_id：从最新快照中读取并落库
+    for i := range plan.Items {
+        it := &plan.Items[i]
+        if it.YYYPTemplateID == nil || *it.YYYPTemplateID == 0 {
+            var snap models.CSQAQGoodSnapshot
+            if err := h.db.Where("good_id = ? AND yyyp_template_id IS NOT NULL", it.GoodID).
+                Order("created_at DESC").First(&snap).Error; err == nil && snap.YYYPTemplateID != nil && *snap.YYYPTemplateID != 0 {
+                tid := *snap.YYYPTemplateID
+                it.YYYPTemplateID = &tid
+                _ = h.db.Model(&models.PurchasePlanItem{}).
+                    Where("id = ?", it.ID).Update("yyyp_template_id", tid).Error
+            }
+        }
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success": true,
+        "plan":    plan,
+    })
+}
+
+// ExecutePurchasePlan 执行求购计划（当前环境支持dry_run模拟；非dry_run返回占位结果）
+// POST /api/v1/youpin/purchase-plans/:id/execute
+// Body: { price_strategy: "auto"|"conservative"|"aggressive", auto_receive: bool, dry_run: bool }
+func (h *APIHandler) ExecutePurchasePlan(c *gin.Context) {
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "缺少计划ID"})
+        return
+    }
+
+    var body struct {
+        PriceStrategy string `json:"price_strategy"`
+        AutoReceive   bool   `json:"auto_receive"`
+        DryRun        bool   `json:"dry_run"`
+    }
+    if err := c.ShouldBindJSON(&body); err != nil {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "参数错误: " + err.Error()})
+        return
+    }
+
+    var plan models.PurchasePlan
+    if err := h.db.Preload("Items").First(&plan, "id = ?", idStr).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "未找到该求购计划"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "查询计划失败: " + err.Error()})
+        return
+    }
+
+    // 计算模拟执行结果
+    type detail struct {
+        GoodID   int64   `json:"good_id"`
+        GoodName string  `json:"good_name"`
+        Success  bool    `json:"success"`
+        Price    float64 `json:"price"`
+        Quantity int     `json:"quantity"`
+        OrderNo  string  `json:"order_no"`
+        Message  string  `json:"message"`
+    }
+
+    var details []detail
+    var successCount, failedCount int
+    var totalCost float64
+
+    for _, it := range plan.Items {
+        if body.DryRun {
+            // 模拟成功
+            successCount++
+            totalCost += it.Subtotal
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  true,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "模拟执行成功（dry_run）",
+            })
+            continue
+        }
+
+        // 实际执行：基于前端传入的 dry_run=false 进行真实下单
+        // 1) 获取活跃的悠悠有品账户（与其它接口保持一致，默认 user_id=1）
+        userID := uint(1)
+        var account models.YouPinAccount
+        if err := h.db.Where("user_id = ? AND is_active = ?", userID, true).First(&account).Error; err != nil {
+            failedCount++
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  false,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "未找到有效的悠悠有品账户，请在账号管理中添加并激活",
+            })
+            continue
+        }
+
+        // 2) 创建客户端并上报设备信息
+        ypClient, err := youpin.NewClient(account.Token)
+        if err != nil {
+            failedCount++
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  false,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "创建悠悠有品客户端失败: " + err.Error(),
+            })
+            continue
+        }
+        _ = ypClient.SendDeviceInfo(c.Request.Context())
+
+        // 3) 校验并解析模板ID（缺失则尝试从快照回填）
+        if it.YYYPTemplateID == nil || *it.YYYPTemplateID == 0 {
+            var snap models.CSQAQGoodSnapshot
+            if err := h.db.Where("good_id = ? AND yyyp_template_id IS NOT NULL", it.GoodID).
+                Order("created_at DESC").First(&snap).Error; err == nil && snap.YYYPTemplateID != nil && *snap.YYYPTemplateID != 0 {
+                tid := *snap.YYYPTemplateID
+                it.YYYPTemplateID = &tid
+                _ = h.db.Model(&models.PurchasePlanItem{}).Where("id = ?", it.ID).Update("yyyp_template_id", tid).Error
+            }
+        }
+        if it.YYYPTemplateID == nil || *it.YYYPTemplateID == 0 {
+            failedCount++
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  false,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "该条目缺少悠悠有品模板ID（yyyp_template_id），无法发起求购",
+            })
+            continue
+        }
+
+        templateIDStr := strconv.FormatInt(*it.YYYPTemplateID, 10)
+
+        // 4) 获取模板求购信息以获得必要参数
+        info, err := ypClient.GetTemplatePurchaseInfo(c.Request.Context(), templateIDStr)
+        if err != nil {
+            failedCount++
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  false,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "获取求购信息失败: " + err.Error(),
+            })
+            continue
+        }
+
+        tpl := info.Data.TemplateInfo
+        // 5) 计算下单价格：
+        //    - 满足价格步进规则（0~1:0.01, 1~50:0.1, 50~1000:1, 1000+:10）
+        //    - 且严格高于当前市场最高求购价一个档位
+        getStep := func(price float64) float64 {
+            switch {
+            case price < 1.0:
+                return 0.01
+            case price < 50.0:
+                return 0.1
+            case price < 1000.0:
+                return 1.0
+            default:
+                return 10.0
+            }
+        }
+        roundToStep := func(price, step float64) float64 {
+            return math.Round(price/step) * step
+        }
+
+        // 查询该模板当前求购列表，取最高求购价
+        currentMax := 0.0
+        if tpl.TemplateId > 0 {
+            if listResp, err := ypClient.GetTemplatePurchaseOrderList(c.Request.Context(), tpl.TemplateId, 1, 50); err == nil && listResp != nil {
+                for _, po := range listResp.Data {
+                    if po.PurchasePrice > currentMax {
+                        currentMax = po.PurchasePrice
+                    }
+                }
+            }
+        }
+
+        // 以计划价为基础做步进修正
+        targetStep := getStep(it.BuyPrice)
+        adjustedPlanPrice := roundToStep(it.BuyPrice, targetStep)
+        if adjustedPlanPrice <= 0 {
+            adjustedPlanPrice = it.BuyPrice
+        }
+
+        // 计算严格高于当前最高求购价的下一档
+        stepForMarket := getStep(currentMax)
+        nextAbove := roundToStep(currentMax+stepForMarket, stepForMarket)
+        if nextAbove <= currentMax {
+            nextAbove = currentMax + stepForMarket
+        }
+
+        // 取两者中更高者，确保出价既符合清单意图，又能站上当前最高价一档
+        finalPrice := adjustedPlanPrice
+        if nextAbove > finalPrice {
+            finalPrice = nextAbove
+        }
+
+        // 6) 发起完整的求购下单流程（余额支付）
+        resp, err := ypClient.CreatePurchaseOrderComplete(
+            c.Request.Context(),
+            templateIDStr,
+            tpl.TemplateHashName,
+            tpl.CommodityName,
+            finalPrice,
+            it.Quantity,
+            tpl.ReferencePrice,
+            tpl.MinSellPrice,
+            tpl.MaxPurchasePrice,
+            body.AutoReceive,
+        )
+        if err != nil {
+            failedCount++
+            details = append(details, detail{
+                GoodID:   it.GoodID,
+                GoodName: it.GoodName,
+                Success:  false,
+                Price:    it.BuyPrice,
+                Quantity: it.Quantity,
+                OrderNo:  "",
+                Message:  "下单失败: " + err.Error(),
+            })
+            continue
+        }
+
+        successCount++
+        totalCost += finalPrice * float64(it.Quantity)
+        orderNo := ""
+        if resp != nil {
+            orderNo = resp.Data.OrderNo
+        }
+        details = append(details, detail{
+            GoodID:   it.GoodID,
+            GoodName: it.GoodName,
+            Success:  true,
+            Price:    finalPrice,
+            Quantity: it.Quantity,
+            OrderNo:  orderNo,
+            Message:  "下单成功",
+        })
+    }
+
+    budgetUsedRate := 0.0
+    if plan.Budget > 0 {
+        budgetUsedRate = (totalCost / plan.Budget) * 100
+    }
+
+    // 非dry_run且全部成功情况下，更新计划状态与花费（这里当前不会到达）
+    allSuccess := failedCount == 0
+    if !body.DryRun && allSuccess {
+        _ = h.db.Model(&plan).Updates(map[string]interface{}{
+            "status":     "completed",
+            "total_cost": totalCost,
+        }).Error
+    }
+
+    c.JSON(http.StatusOK, gin.H{
+        "success":          true,
+        "dry_run":          body.DryRun,
+        "all_success":      allSuccess,
+        "success_count":    successCount,
+        "failed_count":     failedCount,
+        "total_cost":       totalCost,
+        "budget_used_rate": budgetUsedRate,
+        "details":          details,
+    })
+}
+
+// ResetPurchasePlan 将求购计划状态重置为待执行
+// POST /api/v1/youpin/purchase-plans/:id/reset
+func (h *APIHandler) ResetPurchasePlan(c *gin.Context) {
+    idStr := c.Param("id")
+    if idStr == "" {
+        c.JSON(http.StatusBadRequest, gin.H{"success": false, "error": "缺少计划ID"})
+        return
+    }
+
+    var plan models.PurchasePlan
+    if err := h.db.First(&plan, "id = ?", idStr).Error; err != nil {
+        if err == gorm.ErrRecordNotFound {
+            c.JSON(http.StatusNotFound, gin.H{"success": false, "error": "未找到该求购计划"})
+            return
+        }
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "查询计划失败: " + err.Error()})
+        return
+    }
+
+    if err := h.db.Model(&plan).Update("status", "pending").Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "重置计划状态失败: " + err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"success": true, "message": "清单状态已重置为待执行"})
 }

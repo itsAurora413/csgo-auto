@@ -1280,7 +1280,7 @@ func (c *Client) makeRequestWithGzip(ctx context.Context, method, path string, d
 	req.Header.Set("package-type", "uuyp")
 	req.Header.Set("App-Version", "5.37.1")
 	req.Header.Set("uk", "5FQFWiQh8VvtSm0krHaYs52HWGSqA0v4UVcWASmLbSD68mdWzxo3oSoRtbSgwY91L")
-	req.Header.Set("deviceUk", "5FQFZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I")
+	req.Header.Set("deviceUk", "5FQIZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I")
 	req.Header.Set("AppType", "4")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 
@@ -1712,6 +1712,278 @@ func (c *Client) GetTemplateFilterConfig(ctx context.Context, templateId int) (*
 	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/getTemplateFilterConfigV2", data, &response)
 	if err != nil {
 		return nil, fmt.Errorf("获取筛选配置失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// 求购相关API方法 - 基于HAR抓包分析
+
+// GetTemplatePurchaseInfo 获取物品求购信息
+func (c *Client) GetTemplatePurchaseInfo(ctx context.Context, templateId string) (*GetTemplatePurchaseInfoResponse, error) {
+	data := map[string]interface{}{
+		"templateId": templateId,
+	}
+
+	var response GetTemplatePurchaseInfoResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/getTemplatePurchaseInfo", data, &response)
+	if err != nil {
+		return nil, fmt.Errorf("获取求购信息失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// PrePurchaseOrderCheck 预检查求购订单
+func (c *Client) PrePurchaseOrderCheck(ctx context.Context, req PrePurchaseOrderCheckRequest) (*PrePurchaseOrderCheckResponse, error) {
+	var response PrePurchaseOrderCheckResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/prePurchaseOrderCheck", req, &response)
+	if err != nil {
+		return nil, fmt.Errorf("预检查求购订单失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// SavePurchaseOrder 创建求购订单
+func (c *Client) SavePurchaseOrder(ctx context.Context, req SavePurchaseOrderRequest) (*SavePurchaseOrderResponse, error) {
+	var response SavePurchaseOrderResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/savePurchaseOrder", req, &response)
+	if err != nil {
+		return nil, fmt.Errorf("创建求购订单失败: %w", err)
+	}
+
+	// 根据HAR分析，处理各种情况
+	// code == 200210008: 重复求购确认（是否取消并重新发起）
+	if response.Code == 200210008 {
+		return &response, fmt.Errorf("REPEAT_ORDER_CONFIRM: %s", response.Msg)
+	}
+
+	// code == 200210014: 价格高于在售价格的警告
+	if response.Code == 200210014 {
+		return &response, fmt.Errorf("PRICE_WARNING: %s", response.Msg)
+	}
+
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// GetPurchaseOrderDetail 获取求购订单详情
+func (c *Client) GetPurchaseOrderDetail(ctx context.Context, orderNo string) (*GetPurchaseOrderDetailResponse, error) {
+	data := map[string]interface{}{
+		"orderNo": orderNo,
+	}
+
+	var response GetPurchaseOrderDetailResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/getPurchaseOrderDetail", data, &response)
+	if err != nil {
+		return nil, fmt.Errorf("获取求购订单详情失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// GetPurchaseSupplyOrderList 获取求购供应订单列表
+func (c *Client) GetPurchaseSupplyOrderList(ctx context.Context, purchaseNo string) (*GetPurchaseSupplyOrderListResponse, error) {
+	data := map[string]interface{}{
+		"purchaseNo": purchaseNo,
+	}
+
+	var response GetPurchaseSupplyOrderListResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/getPurchaseSupplyOrderList", data, &response)
+	if err != nil {
+		return nil, fmt.Errorf("获取求购供应订单列表失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// GetTemplatePurchaseOrderList 获取物品求购列表
+func (c *Client) GetTemplatePurchaseOrderList(ctx context.Context, templateId int, pageIndex int, pageSize int) (*GetTemplatePurchaseOrderListResponse, error) {
+	if pageIndex <= 0 {
+		pageIndex = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+
+	data := map[string]interface{}{
+		"pageIndex":        pageIndex,
+		"pageSize":         pageSize,
+		"showMaxPriceFlag": false,
+		"templateId":       templateId,
+		"Sessionid":        c.deviceToken,
+	}
+
+	var response GetTemplatePurchaseOrderListResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/getTemplatePurchaseOrderList", data, &response)
+	if err != nil {
+		return nil, fmt.Errorf("获取求购列表失败: %w", err)
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// CreatePurchaseOrderComplete 完整的求购流程（简化版API）
+func (c *Client) CreatePurchaseOrderComplete(ctx context.Context, templateId string, templateHashName string, commodityName string, purchasePrice float64, purchaseNum int, referencePrice string, minSellPrice string, maxPurchasePrice string, autoReceived bool) (*SavePurchaseOrderResponse, error) {
+	// 1. 获取求购信息
+	_, err := c.GetTemplatePurchaseInfo(ctx, templateId)
+	if err != nil {
+		return nil, fmt.Errorf("获取求购信息失败: %w", err)
+	}
+
+	// 2. 预检查订单
+	totalAmount := purchasePrice * float64(purchaseNum)
+	minSell, _ := strconv.ParseFloat(minSellPrice, 64)
+	maxPurchase, _ := strconv.ParseFloat(maxPurchasePrice, 64)
+
+	preCheckReq := PrePurchaseOrderCheckRequest{
+		SpecialStyleObj:  make(map[string]interface{}),
+		IsCheckMaxPrice:  false,
+		TemplateHashName: templateHashName,
+		TotalAmount:      totalAmount,
+		ReferencePrice:   referencePrice,
+		PurchasePrice:    purchasePrice,
+		PurchaseNum:      purchaseNum,
+		DiscountAmount:   0,
+		MinSellPrice:     minSell,
+		MaxPurchasePrice: maxPurchase,
+		TemplateId:       templateId,
+	}
+
+	// 如果开启自动收货，在预检查时也要添加服务代码
+	if autoReceived {
+		preCheckReq.IncrementServiceCode = []int{1001}
+	}
+
+	_, err = c.PrePurchaseOrderCheck(ctx, preCheckReq)
+	if err != nil {
+		return nil, fmt.Errorf("预检查失败: %w", err)
+	}
+
+	// 3. 创建求购订单（首次尝试，不确认支付）
+	templateIdInt, _ := strconv.Atoi(templateId)
+	saveReq := SavePurchaseOrderRequest{
+		TemplateId:            templateIdInt,
+		TemplateHashName:      templateHashName,
+		CommodityName:         commodityName,
+		ReferencePrice:        referencePrice,
+		MinSellPrice:          minSellPrice,
+		MaxPurchasePrice:      maxPurchasePrice,
+		PurchasePrice:         purchasePrice,
+		PurchaseNum:           purchaseNum,
+		NeedPaymentAmount:     totalAmount,
+		TotalAmount:           totalAmount,
+		TemplateName:          commodityName,
+		PriceDifference:       0,
+		DiscountAmount:        0,
+		PayConfirmFlag:        false,
+		RepeatOrderCancelFlag: false,
+	}
+
+	// 如果开启自动收货，添加服务代码
+	if autoReceived {
+		saveReq.IncrementServiceCode = []int{1001}
+	}
+
+	response, err := c.SavePurchaseOrder(ctx, saveReq)
+	if err != nil {
+		// 如果遇到重复订单确认，自动同意取消重新发起
+		if strings.Contains(err.Error(), "REPEAT_ORDER_CONFIRM") {
+			saveReq.RepeatOrderCancelFlag = true
+			response, err = c.SavePurchaseOrder(ctx, saveReq)
+			if err != nil {
+				// 如果还是出错，可能是价格警告
+				if strings.Contains(err.Error(), "PRICE_WARNING") {
+					saveReq.PayConfirmFlag = true
+					response, err = c.SavePurchaseOrder(ctx, saveReq)
+					if err != nil {
+						return nil, fmt.Errorf("三次确认创建求购订单失败: %w", err)
+					}
+				} else {
+					return nil, fmt.Errorf("重复订单确认后失败: %w", err)
+				}
+			}
+		} else if strings.Contains(err.Error(), "PRICE_WARNING") {
+			// 如果遇到价格警告，则需要二次确认
+			saveReq.PayConfirmFlag = true
+			response, err = c.SavePurchaseOrder(ctx, saveReq)
+			if err != nil {
+				return nil, fmt.Errorf("价格警告确认后失败: %w", err)
+			}
+		} else {
+			return nil, fmt.Errorf("创建求购订单失败: %w", err)
+		}
+	}
+
+	return response, nil
+}
+
+// SearchPurchaseOrderList 获取当前账号的求购列表
+func (c *Client) SearchPurchaseOrderList(ctx context.Context, pageIndex, pageSize, status int) (*SearchPurchaseOrderListResponse, error) {
+	data := SearchPurchaseOrderListRequest{
+		PageIndex: pageIndex,
+		PageSize:  pageSize,
+		Status:    status,
+		Sessionid: c.deviceToken,
+	}
+
+	// 添加调试日志
+	jsonData, _ := json.Marshal(data)
+	fmt.Printf("[SearchPurchaseOrderList] Request data: %s\n", string(jsonData))
+
+	var response SearchPurchaseOrderListResponse
+	// 使用gzip压缩，根据抓包数据，这个API需要gzip
+	err := c.makeRequestWithGzip(ctx, "POST", "/api/youpin/bff/trade/purchase/order/searchPurchaseOrderList", data, &response, true)
+	if err != nil {
+		fmt.Printf("[SearchPurchaseOrderList] Request failed: %v\n", err)
+		return nil, err
+	}
+	fmt.Printf("[SearchPurchaseOrderList] Response: code=%d, msg=%s, data_count=%d\n", response.Code, response.Msg, len(response.Data))
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// DeletePurchaseOrder 删除求购订单
+func (c *Client) DeletePurchaseOrder(ctx context.Context, orderNoList []string) (*DeletePurchaseOrderResponse, error) {
+	data := DeletePurchaseOrderRequest{
+		OrderNoList: orderNoList,
+		Sessionid:   c.deviceToken,
+	}
+
+	var response DeletePurchaseOrderResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/deletePurchaseOrder", data, &response)
+	if err != nil {
+		return nil, err
+	}
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+	return &response, nil
+}
+
+// UpdatePurchaseOrder 修改求购订单
+func (c *Client) UpdatePurchaseOrder(ctx context.Context, req UpdatePurchaseOrderRequest) (*UpdatePurchaseOrderResponse, error) {
+	var response UpdatePurchaseOrderResponse
+	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/trade/purchase/order/updatePurchaseOrder", req, &response)
+	if err != nil {
+		return nil, err
 	}
 	if response.Code != 0 {
 		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
