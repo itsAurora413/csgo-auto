@@ -411,7 +411,7 @@ func (s *EnhancedCSQAQSampler) saveSnapshot(goodID int64, gi struct {
 	return false
 }
 
-// isValidPriceRange checks if the good has prices in 50-300 range
+// isValidPriceRange checks if the good has prices in 3-300 range
 func (s *EnhancedCSQAQSampler) isValidPriceRange(goodID int64) bool {
 	var snap models.CSQAQGoodSnapshot
 	err := s.db.Where("good_id = ?", goodID).Order("created_at desc").First(&snap).Error
@@ -419,10 +419,10 @@ func (s *EnhancedCSQAQSampler) isValidPriceRange(goodID int64) bool {
 		return false
 	}
 
-	if snap.YYYPSellPrice != nil && *snap.YYYPSellPrice >= 50 && *snap.YYYPSellPrice <= 300 {
+	if snap.YYYPSellPrice != nil && *snap.YYYPSellPrice >= 3 && *snap.YYYPSellPrice <= 300 {
 		return true
 	}
-	if snap.BuffSellPrice != nil && *snap.BuffSellPrice >= 50 && *snap.BuffSellPrice <= 300 {
+	if snap.BuffSellPrice != nil && *snap.BuffSellPrice >= 3 && *snap.BuffSellPrice <= 300 {
 		return true
 	}
 	return false
