@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
-	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
+	"net"
 	"net/http"
-	"os"
-	"sort"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -31,6 +30,17 @@ type Client struct {
 	userId      string
 	nickname    string
 	baseURL     string
+
+	// 开放平台认证相关
+	useOpenAPI bool       // 是否使用开放平台API
+	rsaSigner  *RSASigner // RSA签名器（开放平台使用）
+	openAPIURL string     // 开放平台API地址
+}
+
+// UserInfo 用户信息
+type UserInfo struct {
+	UserId   interface{} `json:"UserId"` // 支持数字或字符串
+	NickName string      `json:"NickName"`
 }
 
 // AccountBalances 账户余额信息
@@ -58,8 +68,7 @@ func (c *Client) GetBalances(ctx context.Context) (*AccountBalances, error) {
 
 	err := c.makeRequest(ctx, "POST", "/api/youpin/bff/payment/v1/user/account/info", data, &response)
 	if err != nil {
-		// 如果新接口失败，使用旧接口作为备用
-		return c.getBalancesLegacy(ctx)
+		return nil, err
 	}
 
 	if response.Code != 0 {
@@ -76,80 +85,17 @@ func (c *Client) GetBalances(ctx context.Context) (*AccountBalances, error) {
 	}, nil
 }
 
-// getBalancesLegacy 备用的旧版余额查询方法
-func (c *Client) getBalancesLegacy(ctx context.Context) (*AccountBalances, error) {
-	// 适配不同网关，优先尝试bff资产接口，不同环境字段名可能略有差异
-	var resp1 map[string]interface{}
-	if err := c.makeRequest(ctx, "GET", "/api/youpin/bff/user/asset/info", map[string]interface{}{"Sessionid": c.deviceToken}, &resp1); err == nil {
-		if code, ok := resp1["code"].(float64); ok && code == 0 {
-			if data, ok := resp1["data"].(map[string]interface{}); ok {
-				bal := &AccountBalances{}
-				// 兼容多种字段命名
-				extract := func(keys ...string) float64 {
-					for _, k := range keys {
-						if v, ok := data[k]; ok {
-							switch vt := v.(type) {
-							case float64:
-								return vt
-							case int:
-								return float64(vt)
-							case string:
-								if f, err := strconv.ParseFloat(vt, 64); err == nil {
-									return f
-								}
-							}
-						}
-					}
-					return 0
-				}
-				bal.WalletBalance = extract("balance", "walletBalance", "availableBalance")
-				bal.PurchaseBalance = extract("purchaseBalance", "buyBalance", "purchase_available")
-				return bal, nil
-			}
-		}
-	}
-
-	// 退回到通用账户资产接口（安卓端）
-	var resp2 struct {
-		Code    int                    `json:"Code"`
-		Message string                 `json:"Message"`
-		Data    map[string]interface{} `json:"Data"`
-	}
-	if err := c.makeRequest(ctx, "GET", "/api/user/Account/asset", map[string]interface{}{"Sessionid": c.deviceToken}, &resp2); err == nil && resp2.Code == 0 {
-		bal := &AccountBalances{}
-		if v, ok := resp2.Data["Balance"]; ok {
-			switch vt := v.(type) {
-			case float64:
-				bal.WalletBalance = vt
-			case string:
-				if f, err := strconv.ParseFloat(vt, 64); err == nil {
-					bal.WalletBalance = f
-				}
-			}
-		}
-		if v, ok := resp2.Data["PurchaseBalance"]; ok {
-			switch vt := v.(type) {
-			case float64:
-				bal.PurchaseBalance = vt
-			case string:
-				if f, err := strconv.ParseFloat(vt, 64); err == nil {
-					bal.PurchaseBalance = f
-				}
-			}
-		}
-		return bal, nil
-	}
-
-	return nil, fmt.Errorf("无法获取账户余额")
+// NewClient 创建新的悠悠有品客户端（使用Token认证）
+// token: 用户的session token
+// 注意：这是传统的Token认证方式，用于获取账户、搜索、购买等所有需要用户认证的操作
+func NewClient(token string) (*Client, error) {
+	return NewClientWithToken(token)
 }
 
-// NewClient 创建新的悠悠有品客户端
-func NewClient(token string) (*Client, error) {
+// NewClientWithToken 创建新的悠悠有品客户端（使用Token认证）
+func NewClientWithToken(token string) (*Client, error) {
 	// 从环境变量获取设备Token，如果没有则生成随机的
-	deviceToken := os.Getenv("YOUPIN_DEVICE_TOKEN")
-	if deviceToken == "" {
-		deviceToken = generateRandomString(32)
-	}
+	deviceToken := "aNbW21QU7cUDAJB4bK22q1rk"
 
 	client := &Client{
 		httpClient: &http.Client{
@@ -159,6 +105,7 @@ func NewClient(token string) (*Client, error) {
 		deviceToken: deviceToken,
 		deviceID:    deviceToken, // 使用相同的Token作为设备ID
 		baseURL:     BaseURL,
+		useOpenAPI:  false, // 使用传统Token认证
 	}
 
 	// 获取用户信息
@@ -181,40 +128,83 @@ func NewClient(token string) (*Client, error) {
 	return client, nil
 }
 
-// generateRandomString 生成指定长度的随机字符串
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
+// NewClientWithOpenAPI 创建使用开放平台认证的客户端
+// privateKeyBase64: Base64编码的PKCS8格式私钥
+// appKey: 悠悠有品分配的AppKey
+func NewClientWithOpenAPI(privateKeyBase64 string, appKey string) (*Client, error) {
+	// 创建RSA签名器
+	rsaSigner, err := NewRSASigner(privateKeyBase64, appKey)
+	if err != nil {
+		return nil, fmt.Errorf("创建RSA签名器失败: %w", err)
 	}
-	return string(b)
+
+	client := &Client{
+		httpClient: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+		useOpenAPI: true,
+		rsaSigner:  rsaSigner,
+		baseURL:    BaseURL,
+		openAPIURL: "https://gw-openapi.youpin898.com", // 开放平台网关地址
+	}
+
+	return client, nil
 }
 
-// UserInfo 用户信息
-type UserInfo struct {
-	UserId   interface{} `json:"UserId"` // 支持数字或字符串
-	NickName string      `json:"NickName"`
-}
+// NewClientWithTokenAndProxy 创建使用Token认证且支持代理的客户端
+// token: 用户的session token
+// proxyURL: 代理地址，格式: http://username:password@host:port 或 http://host:port
+// timeout: 请求超时时间
+func NewClientWithTokenAndProxy(token string, proxyURL string, timeout time.Duration) (*Client, error) {
+	// 从环境变量获取设备Token，如果没有则生成随机的
+	deviceToken := "aNbW21QU7cUDAJB4bK22q1rk"
 
-// LoginRequest 登录请求
-type LoginRequest struct {
-	Phone    string `json:"phone"`
-	Code     string `json:"code"`
-	Platform string `json:"platform"`
-}
+	// 创建HTTP客户端，支持代理
+	httpClient := &http.Client{
+		Timeout: timeout,
+	}
 
-// LoginResponse 登录响应
-type LoginResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"msg"`
-	Data    struct {
-		AccessToken string `json:"accessToken"`
-		UserInfo    struct {
-			UserId   interface{} `json:"userId"`
-			NickName string      `json:"nickName"`
-		} `json:"userInfo"`
-	} `json:"data"`
+	// 配置代理
+	if proxyURL != "" {
+		proxyFunc := func(_ *http.Request) (*url.URL, error) {
+			return url.Parse(proxyURL)
+		}
+		transport := &http.Transport{
+			Proxy: proxyFunc,
+			DialContext: (&net.Dialer{
+				Timeout: timeout,
+			}).DialContext,
+		}
+		httpClient.Transport = transport
+	}
+
+	client := &Client{
+		httpClient:  httpClient,
+		token:       token,
+		deviceToken: deviceToken,
+		deviceID:    deviceToken,
+		baseURL:     BaseURL,
+		useOpenAPI:  false,
+	}
+
+	// 获取用户信息验证token，使用带超时的 context
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	userInfo, err := client.getUserInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("悠悠有品账号登录失败: %w", err)
+	}
+
+	// 处理UserId的类型转换
+	if userId, ok := userInfo.UserId.(string); ok {
+		client.userId = userId
+	} else if userIdNum, ok := userInfo.UserId.(float64); ok {
+		client.userId = fmt.Sprintf("%.0f", userIdNum)
+	} else {
+		client.userId = fmt.Sprintf("%v", userInfo.UserId)
+	}
+	client.nickname = userInfo.NickName
+	return client, nil
 }
 
 // getUserInfo 获取用户信息
@@ -235,6 +225,36 @@ func (c *Client) getUserInfo(ctx context.Context) (*UserInfo, error) {
 	}
 
 	return &response.Data, nil
+}
+
+// generateRandomString 生成指定长度的随机字符串
+func generateRandomString(length int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[rand.Intn(len(charset))]
+	}
+	return string(b)
+}
+
+// LoginRequest 登录请求
+type LoginRequest struct {
+	Phone    string `json:"phone"`
+	Code     string `json:"code"`
+	Platform string `json:"platform"`
+}
+
+// LoginResponse 登录响应
+type LoginResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"msg"`
+	Data    struct {
+		AccessToken string `json:"accessToken"`
+		UserInfo    struct {
+			UserId   interface{} `json:"userId"`
+			NickName string      `json:"nickName"`
+		} `json:"userInfo"`
+	} `json:"data"`
 }
 
 // SetToken 设置认证令牌
@@ -764,63 +784,6 @@ func (c *Client) GetCommodityDetails(ctx context.Context, templateId string) (*C
 	return response, nil
 }
 
-// 磨损等级辅助函数
-func getWearName(abrade float64) string {
-	if abrade >= 0.45 {
-		return "战痕累累"
-	} else if abrade >= 0.38 {
-		return "破损不堪"
-	} else if abrade >= 0.15 {
-		return "久经沙场"
-	} else if abrade >= 0.07 {
-		return "略有磨损"
-	} else {
-		return "崭新出厂"
-	}
-}
-
-func getWearCode(abrade float64) string {
-	if abrade >= 0.45 {
-		return "BS"
-	} else if abrade >= 0.38 {
-		return "WW"
-	} else if abrade >= 0.15 {
-		return "FT"
-	} else if abrade >= 0.07 {
-		return "MW"
-	} else {
-		return "FN"
-	}
-}
-
-func getMinAbradeForWear(abrade float64) float64 {
-	if abrade >= 0.45 {
-		return 0.45
-	} else if abrade >= 0.38 {
-		return 0.38
-	} else if abrade >= 0.15 {
-		return 0.15
-	} else if abrade >= 0.07 {
-		return 0.07
-	} else {
-		return 0.0
-	}
-}
-
-func getMaxAbradeForWear(abrade float64) float64 {
-	if abrade >= 0.45 {
-		return 1.0
-	} else if abrade >= 0.38 {
-		return 0.45
-	} else if abrade >= 0.15 {
-		return 0.38
-	} else if abrade >= 0.07 {
-		return 0.15
-	} else {
-		return 0.07
-	}
-}
-
 // GetMarketSaleList 获取市场销售列表（不同磨损的物品）
 func (c *Client) GetMarketSaleList(ctx context.Context, templateId string, pageIndex int, pageSize int, minAbrade float64, maxAbrade float64) ([]YouPinMarketItem, error) {
 	data := map[string]interface{}{
@@ -1216,6 +1179,11 @@ func (c *Client) getOfferStatus(ctx context.Context, orderNo string) (*GetOfferS
 
 // makeRequest 发起HTTP请求
 func (c *Client) makeRequest(ctx context.Context, method, path string, data interface{}, result interface{}) error {
+	// 如果使用开放平台API，使用签名请求
+	if c.useOpenAPI {
+		return c.makeOpenAPIRequest(ctx, method, path, data, result)
+	}
+	// 否则使用传统Token认证
 	return c.makeRequestWithGzip(ctx, method, path, data, result, false)
 }
 
@@ -1242,21 +1210,7 @@ func (c *Client) makeRequestWithGzip(ctx context.Context, method, path string, d
 		if err != nil {
 			return fmt.Errorf("序列化请求数据失败: %w", err)
 		}
-
-		if useGzip {
-			// 对JSON数据进行gzip压缩
-			var buf bytes.Buffer
-			gzWriter := gzip.NewWriter(&buf)
-			if _, err := gzWriter.Write(jsonData); err != nil {
-				return fmt.Errorf("gzip压缩失败: %w", err)
-			}
-			if err := gzWriter.Close(); err != nil {
-				return fmt.Errorf("关闭gzip写入器失败: %w", err)
-			}
-			body = &buf
-		} else {
-			body = bytes.NewBuffer(jsonData)
-		}
+		body = bytes.NewBuffer(jsonData)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
@@ -1265,46 +1219,16 @@ func (c *Client) makeRequestWithGzip(ctx context.Context, method, path string, d
 	}
 
 	// 根据抓包信息更新headers格式（模拟Android客户端）
-	req.Header.Set("User-Agent", "okhttp/3.14.9")
-	req.Header.Set("Connection", "Keep-Alive")
-	req.Header.Set("Accept-Encoding", "gzip")
-	req.Header.Set("tracestate", "bnro=android/10_android/8.20.0_okhttp/3.14.9")
-	req.Header.Set("traceparent", fmt.Sprintf("00-%s-%s-01", generateRandomString(32), generateRandomString(16)))
-	req.Header.Set("DeviceToken", c.deviceToken)
-	req.Header.Set("DeviceId", c.deviceID)
-	req.Header.Set("requestTag", strings.ToUpper(generateRandomString(32)))
-	req.Header.Set("Gameid", "730")
-	req.Header.Set("deviceType", "2")
-	req.Header.Set("platform", "android")
-	req.Header.Set("currentTheme", "Light")
-	req.Header.Set("package-type", "uuyp")
-	req.Header.Set("App-Version", "5.37.1")
-	req.Header.Set("uk", "5FQFWiQh8VvtSm0krHaYs52HWGSqA0v4UVcWASmLbSD68mdWzxo3oSoRtbSgwY91L")
-	req.Header.Set("deviceUk", "5FQIZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I")
-	req.Header.Set("AppType", "4")
-	req.Header.Set("Authorization", "Bearer "+c.token)
-
-	// 设置Content-Type和Content-Encoding
-	if method == "POST" || method == "PUT" {
-		req.Header.Set("Content-Type", "application/json")
-		if useGzip {
-			req.Header.Set("Content-Encoding", "gzip")
-		}
-	}
-
-	// Device-Info JSON字符串 - 根据抓包信息更新
-	deviceInfo := map[string]interface{}{
-		"deviceId":      c.deviceID,
-		"deviceType":    "VCE-AL00",
-		"hasSteamApp":   1,
-		"requestTag":    strings.ToUpper(generateRandomString(32)),
-		"systemName ":   "Android", // 注意这里有空格
-		"systemVersion": "10",
-	}
-	deviceInfoJSON, _ := json.Marshal(deviceInfo)
-	req.Header.Set("Device-Info", string(deviceInfoJSON))
-
-	// 发起请求
+	req.Header["Content-Type"] = []string{"application/json"}
+	req.Header["User-Agent"] = []string{"okhttp/3.14.9"}
+	req.Header["DeviceToken"] = []string{c.deviceToken}
+	req.Header["DeviceId"] = []string{c.deviceID}
+	req.Header["platform"] = []string{"android"}
+	req.Header["App-Version"] = []string{"5.37.1"}
+	req.Header["uk"] = []string{"5FQFWiQh8VvtSm0krHaYs52HWGSqA0v4UVcWASmLbSD68mdWzxo3oSoRtbSgwY91L"}
+	req.Header["deviceUk"] = []string{"5FQIZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I"}
+	req.Header["AppType"] = []string{"4"}
+	req.Header["Authorization"] = []string{"Bearer " + c.token}
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("发起请求失败: %w", err)
@@ -1348,44 +1272,6 @@ func (c *Client) makeRequestWithGzip(ctx context.Context, method, path string, d
 	return nil
 }
 
-// signRequest 对请求参数进行签名
-func (c *Client) signRequest(params map[string]interface{}, secret string) string {
-	// 将参数转换为字符串并排序
-	var keys []string
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	// 构建签名字符串
-	var signParts []string
-	for _, k := range keys {
-		v := params[k]
-		var valueStr string
-		switch val := v.(type) {
-		case string:
-			valueStr = val
-		case int:
-			valueStr = strconv.Itoa(val)
-		case int64:
-			valueStr = strconv.FormatInt(val, 10)
-		case float64:
-			valueStr = strconv.FormatFloat(val, 'f', -1, 64)
-		case bool:
-			valueStr = strconv.FormatBool(val)
-		default:
-			valueStr = fmt.Sprintf("%v", val)
-		}
-		signParts = append(signParts, fmt.Sprintf("%s=%s", k, valueStr))
-	}
-
-	signStr := strings.Join(signParts, "&") + "&key=" + secret
-
-	// 计算MD5
-	hash := md5.Sum([]byte(signStr))
-	return fmt.Sprintf("%x", hash)
-}
-
 // SendSMSCode 发送短信验证码
 func SendSMSCode(ctx context.Context, phone string) error {
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -1421,20 +1307,20 @@ func SendSMSCode(ctx context.Context, phone string) error {
 	}
 	deviceInfoJson, _ := json.Marshal(deviceInfo)
 
-	req.Header.Set("uk", generateRandomString(65))
-	req.Header.Set("authorization", "Bearer ")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("User-Agent", "okhttp/3.14.9")
-	req.Header.Set("App-Version", "5.28.3")
-	req.Header.Set("AppType", "4")
-	req.Header.Set("deviceType", "1")
-	req.Header.Set("package-type", "uuyp")
-	req.Header.Set("DeviceToken", sessionId)
-	req.Header.Set("DeviceId", sessionId)
-	req.Header.Set("platform", "android")
-	req.Header.Set("accept-encoding", "gzip")
-	req.Header.Set("Gameid", "730")
-	req.Header.Set("Device-Info", string(deviceInfoJson))
+	req.Header["uk"] = []string{generateRandomString(65)}
+	req.Header["authorization"] = []string{"Bearer "}
+	req.Header["Content-Type"] = []string{"application/json; charset=utf-8"}
+	req.Header["User-Agent"] = []string{"okhttp/3.14.9"}
+	req.Header["App-Version"] = []string{"5.28.3"}
+	req.Header["AppType"] = []string{"4"}
+	req.Header["deviceType"] = []string{"1"}
+	req.Header["package-type"] = []string{"uuyp"}
+	req.Header["DeviceToken"] = []string{sessionId}
+	req.Header["DeviceId"] = []string{sessionId}
+	req.Header["platform"] = []string{"android"}
+	req.Header["accept-encoding"] = []string{"gzip"}
+	req.Header["Gameid"] = []string{"730"}
+	req.Header["Device-Info"] = []string{string(deviceInfoJson)}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1473,97 +1359,6 @@ func SendSMSCode(ctx context.Context, phone string) error {
 	}
 
 	return nil
-}
-
-// LoginWithPhone 使用手机号和验证码登录
-func LoginWithPhone(ctx context.Context, phone, code string) (string, *UserInfo, error) {
-	client := &http.Client{Timeout: 30 * time.Second}
-
-	// 生成会话ID
-	sessionId := generateRandomString(32)
-
-	data := map[string]interface{}{
-		"Area":       86,        // 中国区号
-		"Code":       code,      // 验证码
-		"DeviceName": sessionId, // 设备名称
-		"Sessionid":  sessionId, // 会话ID
-		"Mobile":     phone,     // 手机号
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return "", nil, fmt.Errorf("序列化请求数据失败: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", BaseURL+"/api/user/Auth/SmsSignIn", bytes.NewBuffer(jsonData))
-	if err != nil {
-		return "", nil, fmt.Errorf("创建请求失败: %w", err)
-	}
-
-	// 设置请求头，模拟Android APP
-	deviceInfo := map[string]interface{}{
-		"deviceId":      sessionId,
-		"deviceType":    sessionId,
-		"hasSteamApp":   1,
-		"requestTag":    strings.ToUpper(generateRandomString(32)),
-		"systemName ":   "Android",
-		"systemVersion": "15",
-	}
-	deviceInfoJson, _ := json.Marshal(deviceInfo)
-
-	req.Header.Set("uk", generateRandomString(65))
-	req.Header.Set("authorization", "Bearer ")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	req.Header.Set("User-Agent", "okhttp/3.14.9")
-	req.Header.Set("App-Version", "5.28.3")
-	req.Header.Set("AppType", "4")
-	req.Header.Set("deviceType", "1")
-	req.Header.Set("package-type", "uuyp")
-	req.Header.Set("DeviceToken", sessionId)
-	req.Header.Set("DeviceId", sessionId)
-	req.Header.Set("platform", "android")
-	req.Header.Set("accept-encoding", "gzip")
-	req.Header.Set("Gameid", "730")
-	req.Header.Set("Device-Info", string(deviceInfoJson))
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", nil, fmt.Errorf("发送请求失败: %w", err)
-	}
-	defer resp.Body.Close()
-
-	// 处理gzip压缩
-	var reader io.Reader = resp.Body
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		gzReader, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return "", nil, fmt.Errorf("创建gzip读取器失败: %w", err)
-		}
-		defer gzReader.Close()
-		reader = gzReader
-	}
-
-	respBody, err := io.ReadAll(reader)
-	if err != nil {
-		return "", nil, fmt.Errorf("读取响应失败: %w", err)
-	}
-
-	var response LoginResponse
-	err = json.Unmarshal(respBody, &response)
-	if err != nil {
-		return "", nil, fmt.Errorf("解析响应失败: %w", err)
-	}
-
-	if response.Code != 0 {
-		return "", nil, fmt.Errorf("登录失败: %s", response.Message)
-	}
-
-	userInfo := &UserInfo{
-		UserId:   response.Data.UserInfo.UserId,
-		NickName: response.Data.UserInfo.NickName,
-	}
-
-	return response.Data.AccessToken, userInfo, nil
 }
 
 // SearchItems 搜索商品 - 完全按抓包信息复刻
@@ -1988,5 +1783,113 @@ func (c *Client) UpdatePurchaseOrder(ctx context.Context, req UpdatePurchaseOrde
 	if response.Code != 0 {
 		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
 	}
+	return &response, nil
+}
+
+// makeOpenAPIRequest 发起开放平台签名请求
+func (c *Client) makeOpenAPIRequest(ctx context.Context, method, path string, data interface{}, result interface{}) error {
+	// 1. 准备请求参数
+	var params map[string]interface{}
+	if data != nil {
+		// 将data转换为map
+		dataBytes, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("序列化请求数据失败: %w", err)
+		}
+		if err := json.Unmarshal(dataBytes, &params); err != nil {
+			return fmt.Errorf("转换请求数据失败: %w", err)
+		}
+	} else {
+		params = make(map[string]interface{})
+	}
+
+	// 2. 添加timestamp（GMT+8北京时间）
+	location, _ := time.LoadLocation("Asia/Shanghai")
+	timestamp := time.Now().In(location).Format("2006-01-02 15:04:05")
+
+	// 3. 添加签名
+	if err := c.rsaSigner.AddSignatureToParams(params, timestamp); err != nil {
+		return fmt.Errorf("签名失败: %w", err)
+	}
+
+	// 4. 序列化请求体
+	jsonData, err := json.Marshal(params)
+	if err != nil {
+		return fmt.Errorf("序列化请求数据失败: %w", err)
+	}
+
+	// 5. 构建请求URL（开放平台使用不同的baseURL）
+	url := c.openAPIURL + path
+
+	// 6. 创建HTTP请求
+	req, err := http.NewRequestWithContext(ctx, method, url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return fmt.Errorf("创建请求失败: %w", err)
+	}
+
+	// 7. 设置请求头（开放平台要求）
+	req.Header["Content-Type"] = []string{"application/json"}
+	req.Header["Accept"] = []string{"application/json"}
+
+	// 8. 发起请求
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("发起请求失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// 9. 读取响应
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("读取响应失败: %w", err)
+	}
+
+	// 10. 检查HTTP状态码
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("HTTP错误: %d, 响应: %s", resp.StatusCode, string(respBody))
+	}
+
+	// 11. 解析响应
+	if result != nil {
+		err = json.Unmarshal(respBody, result)
+		if err != nil {
+			return fmt.Errorf("解析响应失败: %w, 响应内容: %s", err, string(respBody))
+		}
+	}
+
+	return nil
+}
+
+// BatchGetOnSaleCommodityInfo 批量查询在售商品价格（开放平台API）
+// requestList: 批量请求参数列表，每项包含templateId或templateHashName
+func (c *Client) BatchGetOnSaleCommodityInfo(ctx context.Context, requestList []map[string]interface{}) (*BatchGetOnSaleCommodityInfoResponse, error) {
+	// 验证是否使用开放平台API
+	if !c.useOpenAPI {
+		return nil, fmt.Errorf("此接口仅支持开放平台API认证方式")
+	}
+
+	// 验证请求列表
+	if len(requestList) == 0 {
+		return nil, fmt.Errorf("请求列表不能为空")
+	}
+	if len(requestList) > 200 {
+		return nil, fmt.Errorf("请求列表数量不能超过200")
+	}
+
+	// 构建请求数据
+	data := map[string]interface{}{
+		"requestList": requestList,
+	}
+
+	var response BatchGetOnSaleCommodityInfoResponse
+	err := c.makeRequest(ctx, "POST", "/open/v1/api/batchGetOnSaleCommodityInfo", data, &response)
+	if err != nil {
+		return nil, fmt.Errorf("批量查询在售商品价格失败: %w", err)
+	}
+
+	if response.Code != 0 {
+		return nil, fmt.Errorf("API返回错误: %s", response.Msg)
+	}
+
 	return &response, nil
 }

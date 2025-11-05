@@ -1,0 +1,135 @@
+[
+  {
+    "timestamp": "2025-10-23T14:18:55.818333",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.81285725244885,
+    "improvement_percent": null
+  },
+  {
+    "timestamp": "2025-10-23T14:20:11.970539",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:20:40.136957",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:22:00.472312",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:22:45.206472",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:23:12.836835",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": null,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:23:43.765123",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": 1361.2774355200936,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:23:51.019930",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": 1361.2774355200936,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T14:24:15.799350",
+    "arima_rmse": 247.19968830075214,
+    "prophet_rmse": 1361.2774355200936,
+    "xgb_rmse": 101.92589571281786,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T16:53:20.833503",
+    "arima_rmse": 264.2940505591041,
+    "prophet_rmse": 1393.5789096032202,
+    "xgb_rmse": 105.24657332589017,
+    "improvement_percent": -6.915203807843941
+  },
+  {
+    "timestamp": "2025-10-23T16:56:16.773474",
+    "arima_rmse": 263.91726866162827,
+    "prophet_rmse": 1391.596556934846,
+    "xgb_rmse": 105.43724414865919,
+    "improvement_percent": 0.14256162659687918
+  },
+  {
+    "timestamp": "2025-10-23T16:56:55.932781",
+    "arima_rmse": 263.91726866162827,
+    "prophet_rmse": 1391.596556934846,
+    "xgb_rmse": 105.43724414865919,
+    "improvement_percent": 0.0
+  },
+  {
+    "timestamp": "2025-10-23T18:00:04.415741",
+    "arima_rmse": 262.3787147986018,
+    "prophet_rmse": 1388.2777611339716,
+    "xgb_rmse": 104.64303119008385,
+    "improvement_percent": 0.5829682425969226
+  },
+  {
+    "timestamp": "2025-10-23T18:11:22.207713",
+    "arima_rmse": 266.26286007550755,
+    "prophet_rmse": 1381.406213794143,
+    "xgb_rmse": 107.76975259685067,
+    "improvement_percent": -1.4803583743015074
+  },
+  {
+    "timestamp": "2025-10-24T09:48:33.325169",
+    "arima_rmse": 346.03002919055325,
+    "prophet_rmse": 1573.723611215835,
+    "xgb_rmse": 105.64270461385387,
+    "improvement_percent": -29.958053140578865
+  },
+  {
+    "timestamp": "2025-10-24T11:03:11.287574",
+    "arima_rmse": 388.8291576497131,
+    "prophet_rmse": 1613.051840792057,
+    "xgb_rmse": 105.6478265009589,
+    "improvement_percent": -12.368616839202435
+  },
+  {
+    "timestamp": "2025-10-24T17:08:21.526253",
+    "arima_rmse": 752.4482344628295,
+    "prophet_rmse": 1969.1442647171705,
+    "xgb_rmse": 109.5515141475919,
+    "improvement_percent": -93.51641194066319
+  },
+  {
+    "timestamp": "2025-10-27T10:25:48.717547",
+    "arima_rmse": 827.1926482633634,
+    "prophet_rmse": 1795.669419980149,
+    "xgb_rmse": 34.08133673202473,
+    "improvement_percent": -9.933495804384954
+  },
+  {
+    "timestamp": "2025-10-27T16:44:44.379017",
+    "arima_rmse": 655.5101417507515,
+    "prophet_rmse": 1593.0116116202714,
+    "xgb_rmse": 25.853313918579705,
+    "improvement_percent": 20.754839501178843
+  }
+]

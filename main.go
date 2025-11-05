@@ -24,6 +24,13 @@ func main() {
 	// Initialize configuration
 	cfg := config.Load()
 
+	// Print YouPin authentication mode
+	if cfg.YoupinAppKey != "" && len(cfg.YoupinAppKey) >= 8 {
+		log.Printf("🔐 悠悠有品: 开放平台API模式 (AppKey: %s...)", cfg.YoupinAppKey[:8])
+	} else {
+		log.Println("⚠️  悠悠有品: 开放平台API未配置")
+	}
+
 	// Initialize database
 	db, err := database.Initialize(cfg.DatabaseURL)
 	if err != nil {

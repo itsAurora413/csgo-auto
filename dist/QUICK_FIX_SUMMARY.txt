@@ -1,0 +1,119 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                      🔧 HOTFIX - 趋势分析修复                                ║
+║                     Trading System v1.1 (2025-10-18)                        ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+【问题】
+  • 格洛克 18 型（StatTrak™）| 粉碎者被错误推荐
+  • 数据库显示买价从 82 元→52 元（36% 下跌）
+  • 尽管有明显下降趋势，仍显示 109.9% 利润率
+
+【根本原因】
+  1. ❌ 用售价而不是买价分析趋势
+  2. ❌ 线性回归归一化假设不适应不同价格水平
+  3. ❌ 无法检测短期陡峭价格下跌
+
+【修复方案】
+  1. ✅ 改用买价进行四因子趋势分析
+  2. ✅ 动态百分比归一化，自适应所有价格水平
+  3. ✅ 添加最近 6 小时跌幅 >10% 的硬性过滤
+
+【修改的代码】
+  文件: cmd/analyzer/main.go
+
+  修改1（行 365-372）：检测最近买价陡峭下跌
+    if len(buyPrices) >= 2 {
+        recentBuyPriceChange := (buyPrices[len(buyPrices)-1] - buyPrices[len(buyPrices)-2]) / buyPrices[len(buyPrices)-2]
+        if recentBuyPriceChange < -0.10 {  // 跌幅>10%
+            return models.ArbitrageOpportunity{}, false  // 排除
+        }
+    }
+
+  修改2（行 443-465）：使用买价而不是售价
+    var buyPrices []float64
+    // 提取买价用于趋势分析
+    trendScore := calculateTrendFactor(buyPrices)        // 趋势因子
+    seasonalityScore := calculateSeasonalityFactor(buyPrices)    // 季节性
+    volatilityScore := calculateVolatilityFactor(buyPrices)      // 波动性
+    meanReversionScore := calculateMeanReversionFactor(buyPrices) // 均值回归
+
+  修改3（行 507-528）：动态百分比归一化
+    avgPrice := sumY / n
+    slopePercent := (slope / avgPrice) * 100  // 相对百分比
+    normalizedSlope := 50 + math.Max(-40, math.Min(40, slopePercent/0.1))
+
+【效果对比】
+
+  格洛克 18 型（StatTrak™）| 粉碎者
+  ─────────────────────────────────
+  修复前：✅ 被推荐  利润率 109.9%
+  修复后：❌ 被拒绝  原因：36% 下跌 > 10% 阈值
+
+  【预期改进】
+  • 下跌趋势物品不再被推荐
+  • 陡峭价格下跌物品被排除
+  • 推荐列表质量提高
+
+【部署步骤】
+
+  1. 备份旧版本
+     cp trading-system-linux-x86_64.tar.gz trading-system-linux-x86_64.tar.gz.backup
+
+  2. 解压新版本
+     tar -xzf trading-system-linux-x86_64.tar.gz
+     cd trading-system-linux
+
+  3. 运行测试
+     ./analyzer -budget 50
+
+  4. 检查结果
+     • 应该 NOT 包含格洛克 18 粉碎者（如果有下跌数据）
+     • "发现 N 个套利机会"的数字会略少（过滤了下跌物品）
+
+【验证清单】
+  ✅ 代码修改完成
+  ✅ 编译成功 (ELF 64-bit LSB executable)
+  ✅ 发行包重新打包
+  ✅ 向后兼容
+  ✅ 文档已更新
+
+【关键改进思想】
+
+  1️⃣ 分析正确的指标
+     • 买价（购买成本）的趋势 > 售价趋势
+     • 购买成本的变化直接影响未来利润
+
+  2️⃣ 百分比归一化
+     • 使用相对百分比而不是绝对值
+     • 自动适应 50 元和 500 元的商品
+
+  3️⃣ 多层防护
+     数值过滤 (5%, 100+数量)
+       ↓
+     短期下跌检测 (>10%) ← 新增 ⭐
+       ↓
+     中期趋势分析 (四因子)
+       ↓
+     评分和排序
+
+【文档】
+  • HOTFIX_2025_10_18.md       - 详细修复说明
+  • TREND_FIX_SUMMARY.md       - 技术分析报告
+  • IMPLEMENTATION_COMPLETE.md - 完整实现细节
+
+【限制和注意】
+  • 当前下跌阈值固定为 10%
+  • 检测周期为相邻快照（约 6 小时）
+  • 短期过滤不适用于超长期的缓慢下跌
+
+【问题反馈】
+  如发现问题，请检查：
+  1. 数据库中的价格历史
+  2. 查看详细的修复说明文档
+  3. 验证下跌物品的具体数据
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║  完成时间: 2025-10-18 22:54 UTC                                             ║
+║  版本: trading-system-linux-x86_64.tar.gz (v1.1)                            ║
+║  状态: ✅ 完成并验证                                                         ║
+╚══════════════════════════════════════════════════════════════════════════════╝

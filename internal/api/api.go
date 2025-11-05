@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"csgo-trader/internal/models"
+	"csgo-trader/internal/services"
 	steamService "csgo-trader/internal/services/steam"
 	steamauth "csgo-trader/internal/services/steamauth"
 	"csgo-trader/internal/services/youpin"
@@ -114,9 +115,15 @@ func SetupRoutes(r *gin.RouterGroup, db *gorm.DB, steam *steamService.SteamServi
 		youpin.GET("/orders", handler.GetYouPinOrders)
 		youpin.GET("/inventory", handler.GetYouPinInventory)
 
+		// 库存管理（通过OpenAPI）
+		youpin.GET("/inventory/steam-data", handler.GetSteamInventoryData)
+		youpin.POST("/inventory/commodity-price-info", handler.GetCommodityPriceInfo)
+		youpin.POST("/inventory/on-shelf-single", handler.ShelfSingleItem)
+		youpin.POST("/inventory/on-shelf-batch", handler.ShelfBatchItems)
+
 		// SMS认证
 		youpin.POST("/send-sms", handler.SendYouPinSMS)
-		youpin.POST("/login-with-phone", handler.LoginYouPinWithPhone)
+		// youpin.POST("/login-with-phone", handler.LoginYouPinWithPhone)
 
 		// 购买相关功能
 		youpin.POST("/search", handler.SearchYouPinCommodities)
@@ -791,14 +798,6 @@ func (h *APIHandler) ListCSQAQGoods(c *gin.Context) {
 		pageSize = 20
 	}
 
-	// 清理孤立的快照数据：删除csqaq_good_snapshots中存在但csqaq_goods中不存在的商品快照
-	_ = h.db.Exec(`
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    `).Error
-
 	var goods []models.CSQAQGood
 	q := h.db.Model(&models.CSQAQGood{})
 
@@ -810,52 +809,6 @@ func (h *APIHandler) ListCSQAQGoods(c *gin.Context) {
 	_ = q.Count(&total).Error
 	_ = q.Order("good_id ASC").Offset((page - 1) * pageSize).Limit(pageSize).Find(&goods).Error
 
-	// 获取每个商品的快照数据、最新价格信息
-	ids := make([]int64, 0, len(goods))
-	for _, g := range goods {
-		ids = append(ids, g.GoodID)
-	}
-
-	type aggRow struct {
-		GoodID        int64
-		Cnt           int64
-		Last          string
-		YyypSellPrice *float64
-		BuffSellPrice *float64
-	}
-	aggs := make([]aggRow, 0)
-	if len(ids) > 0 {
-		// 获取每个商品最新的快照数据
-		_ = h.db.Raw(`
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN ?
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        `, ids).Scan(&aggs).Error
-	}
-
-	mCnt := map[int64]int64{}
-	mLast := map[int64]string{}
-	mYyypPrice := map[int64]*float64{}
-	mBuffPrice := map[int64]*float64{}
-	for _, a := range aggs {
-		mCnt[a.GoodID] = a.Cnt
-		mLast[a.GoodID] = a.Last
-		mYyypPrice[a.GoodID] = a.YyypSellPrice
-		mBuffPrice[a.GoodID] = a.BuffSellPrice
-	}
-
 	items := make([]gin.H, 0, len(goods))
 	for _, g := range goods {
 		item := gin.H{
@@ -863,15 +816,8 @@ func (h *APIHandler) ListCSQAQGoods(c *gin.Context) {
 			"good_id":          g.GoodID,
 			"name":             g.Name,
 			"market_hash_name": g.MarketHashName,
-			"snapshot_count":   mCnt[g.GoodID],
-			"last_sampled_at":  mLast[g.GoodID],
-		}
-		// 添加最新价格信息
-		if price := mYyypPrice[g.GoodID]; price != nil {
-			item["yyyp_sell_price"] = *price
-		}
-		if price := mBuffPrice[g.GoodID]; price != nil {
-			item["buff_sell_price"] = *price
+			"snapshot_count":   0,
+			"last_sampled_at":  0,
 		}
 		items = append(items, item)
 	}
@@ -904,8 +850,8 @@ func (h *APIHandler) GetCSQAQGoodDetail(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json", body)
 }
 
-// GetGoodKline aggregates snapshots into OHLC series
-// GET /api/v1/csqaq/good/kline?id=6796&interval=20m|1h|1d&limit=200
+// GetGoodKline aggregates snapshots into OHLC series with technical indicators
+// GET /api/v1/csqaq/good/kline?id=6796&interval=20m|1h|1d&limit=200&indicators=ma5,ma20,macd,rsi
 func (h *APIHandler) GetGoodKline(c *gin.Context) {
 	idStr := strings.TrimSpace(c.Query("id"))
 	if idStr == "" {
@@ -922,6 +868,7 @@ func (h *APIHandler) GetGoodKline(c *gin.Context) {
 	if limit <= 0 {
 		limit = 200
 	}
+	indicatorsParam := strings.TrimSpace(c.Query("indicators"))
 
 	// fetch snapshots
 	var snaps []models.CSQAQGoodSnapshot
@@ -956,7 +903,7 @@ func (h *APIHandler) GetGoodKline(c *gin.Context) {
 		o, h, l, c float64
 	}
 	var bars []bar
-	// aggregate by bucket using prefer(yyyp sell -> buff sell -> yyyp buy -> buff buy)
+	// aggregate by bucket using yyyp sell price as primary (as per user requirement)
 	var curStart time.Time
 	had := false
 	var o, hi, lo, cpx float64
@@ -1011,9 +958,159 @@ func (h *APIHandler) GetGoodKline(c *gin.Context) {
 	if len(bars) > limit {
 		bars = bars[len(bars)-limit:]
 	}
+
+	// Extract close, high, low prices for indicator calculation
+	closes := make([]float64, len(bars))
+	highs := make([]float64, len(bars))
+	lows := make([]float64, len(bars))
+	for i, b := range bars {
+		closes[i] = b.c
+		highs[i] = b.h
+		lows[i] = b.l
+	}
+
+	// Calculate all indicators
+	indicators := services.CalculateAllIndicators(closes, highs, lows)
+
+	// Parse requested indicators (if empty, include all)
+	requestedIndicators := make(map[string]bool)
+	if indicatorsParam != "" {
+		for _, ind := range strings.Split(indicatorsParam, ",") {
+			requestedIndicators[strings.TrimSpace(ind)] = true
+		}
+	}
+
+	// Build response
 	out := make([]gin.H, len(bars))
 	for i, b := range bars {
-		out[i] = gin.H{"t": b.t, "o": b.o, "h": b.h, "l": b.l, "c": b.c, "v": 0}
+		baseData := gin.H{
+			"t": b.t,
+			"o": b.o,
+			"h": b.h,
+			"l": b.l,
+			"c": b.c,
+			"v": 0,
+		}
+
+		// Include indicators
+		ind := indicators[i]
+
+		// If no specific indicators requested, include all available
+		if len(requestedIndicators) == 0 {
+			// Include all indicators that have values
+			if ind.MA5 != nil {
+				baseData["ma5"] = *ind.MA5
+			}
+			if ind.MA10 != nil {
+				baseData["ma10"] = *ind.MA10
+			}
+			if ind.MA20 != nil {
+				baseData["ma20"] = *ind.MA20
+			}
+			if ind.MA60 != nil {
+				baseData["ma60"] = *ind.MA60
+			}
+			if ind.MA120 != nil {
+				baseData["ma120"] = *ind.MA120
+			}
+			if ind.EMA12 != nil {
+				baseData["ema12"] = *ind.EMA12
+			}
+			if ind.EMA26 != nil {
+				baseData["ema26"] = *ind.EMA26
+			}
+			if ind.MACD != nil {
+				baseData["macd"] = *ind.MACD
+			}
+			if ind.MACDSignal != nil {
+				baseData["macd_signal"] = *ind.MACDSignal
+			}
+			if ind.MACDHist != nil {
+				baseData["macd_histogram"] = *ind.MACDHist
+			}
+			if ind.RSI14 != nil {
+				baseData["rsi14"] = *ind.RSI14
+			}
+			if ind.BBUpper != nil {
+				baseData["bb_upper"] = *ind.BBUpper
+			}
+			if ind.BBMiddle != nil {
+				baseData["bb_middle"] = *ind.BBMiddle
+			}
+			if ind.BBLower != nil {
+				baseData["bb_lower"] = *ind.BBLower
+			}
+			if ind.KDJK != nil {
+				baseData["kdj_k"] = *ind.KDJK
+			}
+			if ind.KDJD != nil {
+				baseData["kdj_d"] = *ind.KDJD
+			}
+			if ind.KDJJ != nil {
+				baseData["kdj_j"] = *ind.KDJJ
+			}
+			if ind.ATR14 != nil {
+				baseData["atr14"] = *ind.ATR14
+			}
+		} else {
+			// Include only requested indicators
+			if requestedIndicators["ma5"] && ind.MA5 != nil {
+				baseData["ma5"] = *ind.MA5
+			}
+			if requestedIndicators["ma10"] && ind.MA10 != nil {
+				baseData["ma10"] = *ind.MA10
+			}
+			if requestedIndicators["ma20"] && ind.MA20 != nil {
+				baseData["ma20"] = *ind.MA20
+			}
+			if requestedIndicators["ma60"] && ind.MA60 != nil {
+				baseData["ma60"] = *ind.MA60
+			}
+			if requestedIndicators["ma120"] && ind.MA120 != nil {
+				baseData["ma120"] = *ind.MA120
+			}
+			if requestedIndicators["ema12"] && ind.EMA12 != nil {
+				baseData["ema12"] = *ind.EMA12
+			}
+			if requestedIndicators["ema26"] && ind.EMA26 != nil {
+				baseData["ema26"] = *ind.EMA26
+			}
+			if requestedIndicators["macd"] && ind.MACD != nil {
+				baseData["macd"] = *ind.MACD
+			}
+			if requestedIndicators["macd_signal"] && ind.MACDSignal != nil {
+				baseData["macd_signal"] = *ind.MACDSignal
+			}
+			if requestedIndicators["macd_histogram"] && ind.MACDHist != nil {
+				baseData["macd_histogram"] = *ind.MACDHist
+			}
+			if requestedIndicators["rsi"] && ind.RSI14 != nil {
+				baseData["rsi14"] = *ind.RSI14
+			}
+			if requestedIndicators["bb_upper"] && ind.BBUpper != nil {
+				baseData["bb_upper"] = *ind.BBUpper
+			}
+			if requestedIndicators["bb_middle"] && ind.BBMiddle != nil {
+				baseData["bb_middle"] = *ind.BBMiddle
+			}
+			if requestedIndicators["bb_lower"] && ind.BBLower != nil {
+				baseData["bb_lower"] = *ind.BBLower
+			}
+			if requestedIndicators["kdj_k"] && ind.KDJK != nil {
+				baseData["kdj_k"] = *ind.KDJK
+			}
+			if requestedIndicators["kdj_d"] && ind.KDJD != nil {
+				baseData["kdj_d"] = *ind.KDJD
+			}
+			if requestedIndicators["kdj_j"] && ind.KDJJ != nil {
+				baseData["kdj_j"] = *ind.KDJJ
+			}
+			if requestedIndicators["atr"] && ind.ATR14 != nil {
+				baseData["atr14"] = *ind.ATR14
+			}
+		}
+
+		out[i] = baseData
 	}
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "ok", "interval": interval, "data": out})
 }
@@ -1126,6 +1223,7 @@ func (h *APIHandler) SampleGoodSnapshot(c *gin.Context) {
 				BuffSellPrice float64 `json:"buff_sell_price"`
 				BuffBuyPrice  float64 `json:"buff_buy_price"`
 				YyypID        int64   `json:"yyyp_id"`
+				RankNum       *int    `json:"rank_num"` // 热度排名
 			} `json:"goods_info"`
 		} `json:"data"`
 	}
@@ -1153,6 +1251,10 @@ func (h *APIHandler) SampleGoodSnapshot(c *gin.Context) {
 	snap.BuffSellPrice = &buffSell
 	buffBuy := gi.BuffBuyPrice
 	snap.BuffBuyPrice = &buffBuy
+	// 热度排名
+	if gi.RankNum != nil {
+		snap.RankNum = gi.RankNum
+	}
 	// map API's yyyp_id into snapshot.YYYPTemplateID
 	if gi.YyypID > 0 {
 		tid := gi.YyypID
@@ -1162,6 +1264,7 @@ func (h *APIHandler) SampleGoodSnapshot(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"code": 200, "msg": "snapshot created", "data": gin.H{"good_id": req.ID, "created_at": snap.CreatedAt}})
 }
 
@@ -1768,12 +1871,14 @@ func (h *APIHandler) AddYouPinAccount(c *gin.Context) {
 		return
 	}
 
-	// 验证token有效性
-	client, err := youpin.NewClient(req.Token)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的token: " + err.Error()})
+	// 验证token有效性（只验证格式，不使用OpenAPI逻辑）
+	if req.Token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token不能为空"})
 		return
 	}
+
+	// Token格式应该是一个字符串，直接存储即可
+	// 不需要创建Client来验证，避免与OpenAPI混淆
 
 	// 获取用户ID（这里假设从JWT或session中获取）
 	userID := uint(1) // 实际实现中需要从认证信息中获取
@@ -1788,7 +1893,7 @@ func (h *APIHandler) AddYouPinAccount(c *gin.Context) {
 	account := models.YouPinAccount{
 		UserID:   userID,
 		Token:    req.Token,
-		Nickname: client.GetUserNickname(),
+		Nickname: "", // Token添加时不获取昵称，避免调用OpenAPI逻辑
 		IsActive: true,
 	}
 
@@ -2526,76 +2631,76 @@ func (h *APIHandler) SendYouPinSMS(c *gin.Context) {
 	})
 }
 
-// LoginYouPinWithPhone 使用手机号和验证码登录悠悠有品
-func (h *APIHandler) LoginYouPinWithPhone(c *gin.Context) {
-	var req struct {
-		Phone string `json:"phone" binding:"required"`
-		Code  string `json:"code" binding:"required"`
-	}
+// // LoginYouPinWithPhone 使用手机号和验证码登录悠悠有品
+// func (h *APIHandler) LoginYouPinWithPhone(c *gin.Context) {
+// 	var req struct {
+// 		Phone string `json:"phone" binding:"required"`
+// 		Code  string `json:"code" binding:"required"`
+// 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "手机号和验证码不能为空"})
-		return
-	}
+// 	if err := c.ShouldBindJSON(&req); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{"error": "手机号和验证码不能为空"})
+// 		return
+// 	}
 
-	// 使用手机号和验证码登录
-	token, userInfo, err := youpin.LoginWithPhone(c.Request.Context(), req.Phone, req.Code)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "登录失败: " + err.Error()})
-		return
-	}
+// 	// 使用手机号和验证码登录
+// 	token, userInfo, err := youpin.LoginWithPhone(c.Request.Context(), req.Phone, req.Code)
+// 	if err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "登录失败: " + err.Error()})
+// 		return
+// 	}
 
-	// 检查是否已有此用户的账户
-	userID := uint(1) // 实际实现中需要从认证信息中获取
-	var existingAccount models.YouPinAccount
-	if err := h.db.Where("user_id = ? AND phone = ?", userID, req.Phone).First(&existingAccount).Error; err == nil {
-		// 更新现有账户的token
-		existingAccount.Token = token
-		existingAccount.Nickname = userInfo.NickName
-		existingAccount.IsActive = true
-		existingAccount.UpdatedAt = time.Now()
+// 	// 检查是否已有此用户的账户
+// 	userID := uint(1) // 实际实现中需要从认证信息中获取
+// 	var existingAccount models.YouPinAccount
+// 	if err := h.db.Where("user_id = ? AND phone = ?", userID, req.Phone).First(&existingAccount).Error; err == nil {
+// 		// 更新现有账户的token
+// 		existingAccount.Token = token
+// 		existingAccount.Nickname = userInfo.NickName
+// 		existingAccount.IsActive = true
+// 		existingAccount.UpdatedAt = time.Now()
 
-		if err := h.db.Save(&existingAccount).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新账户失败"})
-			return
-		}
+// 		if err := h.db.Save(&existingAccount).Error; err != nil {
+// 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新账户失败"})
+// 			return
+// 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"message": "登录成功，账户已更新",
-			"account": gin.H{
-				"id":       existingAccount.ID,
-				"nickname": existingAccount.Nickname,
-				"phone":    existingAccount.Phone,
-			},
-		})
-		return
-	}
+// 		c.JSON(http.StatusOK, gin.H{
+// 			"message": "登录成功，账户已更新",
+// 			"account": gin.H{
+// 				"id":       existingAccount.ID,
+// 				"nickname": existingAccount.Nickname,
+// 				"phone":    existingAccount.Phone,
+// 			},
+// 		})
+// 		return
+// 	}
 
-	// 创建新账户
-	account := models.YouPinAccount{
-		UserID:    userID,
-		Token:     token,
-		Nickname:  userInfo.NickName,
-		Phone:     req.Phone,
-		IsActive:  true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+// 	// 创建新账户
+// 	account := models.YouPinAccount{
+// 		UserID:    userID,
+// 		Token:     token,
+// 		Nickname:  userInfo.NickName,
+// 		Phone:     req.Phone,
+// 		IsActive:  true,
+// 		CreatedAt: time.Now(),
+// 		UpdatedAt: time.Now(),
+// 	}
 
-	if err := h.db.Create(&account).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建账户失败"})
-		return
-	}
+// 	if err := h.db.Create(&account).Error; err != nil {
+// 		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建账户失败"})
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "登录成功，账户已创建",
-		"account": gin.H{
-			"id":       account.ID,
-			"nickname": account.Nickname,
-			"phone":    account.Phone,
-		},
-	})
-}
+// 	c.JSON(http.StatusOK, gin.H{
+// 		"message": "登录成功，账户已创建",
+// 		"account": gin.H{
+// 			"id":       account.ID,
+// 			"nickname": account.Nickname,
+// 			"phone":    account.Phone,
+// 		},
+// 	})
+// }
 
 // 购买相关处理函数
 
@@ -4745,7 +4850,8 @@ func (h *APIHandler) ExecutePurchasePlan(c *gin.Context) {
 				Order("created_at DESC").First(&snap).Error; err == nil && snap.YYYPTemplateID != nil && *snap.YYYPTemplateID != 0 {
 				tid := *snap.YYYPTemplateID
 				it.YYYPTemplateID = &tid
-				_ = h.db.Model(&models.PurchasePlanItem{}).Where("id = ?", it.ID).Update("yyyp_template_id", tid).Error
+				_ = h.db.Model(&models.PurchasePlanItem{}).
+					Where("id = ?", it.ID).Update("yyyp_template_id", tid).Error
 			}
 		}
 		if it.YYYPTemplateID == nil || *it.YYYPTemplateID == 0 {
@@ -4958,4 +5064,407 @@ func (h *APIHandler) ResetPurchasePlan(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "清单状态已重置为待执行"})
+}
+
+// GetSteamInventoryData 获取Steam库存数据
+func (h *APIHandler) GetSteamInventoryData(c *gin.Context) {
+	// 从请求参数获取Steam ID
+	steamID := c.Query("steam_id")
+	if steamID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "缺少steam_id参数"})
+		return
+	}
+
+	// 获取活跃的YouPin账户
+	var accounts []models.YouPinAccount
+	if err := h.db.Where("is_active = ?", true).Find(&accounts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取账户列表失败"})
+		return
+	}
+
+	if len(accounts) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未找到有效的悠悠有品账户"})
+		return
+	}
+
+	// 创建OpenAPI客户端
+	openAPIClient, err := youpin.NewOpenAPIClientWithDefaultKeysAndToken(accounts[0].Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建OpenAPI客户端失败: " + err.Error()})
+		return
+	}
+
+	// 获取Steam库存数据
+	ctx := c.Request.Context()
+	steamInventory, err := openAPIClient.GetUserSteamInventoryData(ctx, steamID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取Steam库存失败: " + err.Error()})
+		return
+	}
+
+	// 转换数据格式
+	type InventoryItem struct {
+		ItemAssetID      string `json:"item_asset_id"`
+		TemplateID       int    `json:"template_id"`
+		TemplateName     string `json:"template_name"`
+		TemplateHashName string `json:"template_hash_name"`
+		ItemImgUrl       string `json:"item_img_url"`
+		ExteriorName     string `json:"exterior_name"`
+		Tradable         int    `json:"tradable"`
+		Marketable       int    `json:"marketable"`
+		AssetStatus      int    `json:"asset_status"`
+		MarketPrice      string `json:"market_price"`
+		MarketMinPrice   string `json:"market_min_price"`
+		CommodityStatus  string `json:"commodity_status"`
+		CommodityPrice   string `json:"commodity_price"`
+	}
+
+	var items []InventoryItem
+	for _, item := range steamInventory.Data {
+		invItem := InventoryItem{
+			ItemAssetID: strconv.FormatInt(item.ItemAssetID, 10),
+		}
+
+		if item.AssetDetail != nil {
+			invItem.TemplateID = item.AssetDetail.TemplateID
+			invItem.TemplateName = item.AssetDetail.TemplateName
+			invItem.TemplateHashName = item.AssetDetail.TemplateHashName
+			invItem.ItemImgUrl = item.AssetDetail.ItemImgURL
+			invItem.ExteriorName = item.AssetDetail.ExteriorName
+			invItem.Tradable = item.AssetDetail.Tradable
+			invItem.Marketable = item.AssetDetail.Marketable
+			invItem.AssetStatus = item.AssetDetail.AssetStatus
+		}
+
+		if item.MarketDetail != nil {
+			invItem.MarketPrice = item.MarketDetail.MarketPrice
+			invItem.MarketMinPrice = item.MarketDetail.MarketMinPrice
+		}
+
+		if item.CommodityDetail != nil {
+			invItem.CommodityStatus = item.CommodityDetail.CommodityStatus
+			invItem.CommodityPrice = strconv.FormatFloat(item.CommodityDetail.CommodityPrice, 'f', -1, 64)
+		}
+
+		items = append(items, invItem)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    items,
+		"count":   len(items),
+	})
+}
+
+// GetCommodityPriceInfo 获取商品价格信息
+// 请求体: { "template_ids": [1,2,3] } 或 { "template_hash_names": ["name1", "name2"] }
+func (h *APIHandler) GetCommodityPriceInfo(c *gin.Context) {
+	var req struct {
+		TemplateIds       []int    `json:"template_ids,omitempty"`
+		TemplateHashNames []string `json:"template_hash_names,omitempty"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数格式错误"})
+		return
+	}
+
+	// 验证参数
+	if len(req.TemplateIds) == 0 && len(req.TemplateHashNames) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "templateIds或templateHashNames不能为空"})
+		return
+	}
+
+	// 构建请求列表
+	var requestList []youpin.BatchPriceQueryItem
+	for _, tid := range req.TemplateIds {
+		if tid > 0 {
+			tid := tid // 避免闭包陷阱
+			requestList = append(requestList, youpin.BatchPriceQueryItem{TemplateID: &tid})
+		}
+	}
+	for _, hashName := range req.TemplateHashNames {
+		if hashName != "" {
+			hashName := hashName // 避免闭包陷阱
+			requestList = append(requestList, youpin.BatchPriceQueryItem{TemplateHashName: &hashName})
+		}
+	}
+
+	if len(requestList) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "没有有效的模板参数"})
+		return
+	}
+
+	// 创建OpenAPI客户端
+	openAPIClient, err := youpin.NewOpenAPIClientWithDefaultKeys()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建OpenAPI客户端失败: " + err.Error()})
+		return
+	}
+
+	// 调用API获取价格信息
+	ctx := c.Request.Context()
+	priceInfo, err := openAPIClient.BatchGetOnSaleCommodityInfo(ctx, requestList)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取商品价格信息失败: " + err.Error()})
+		return
+	}
+
+	// 转换响应格式
+	type PriceData struct {
+		TemplateID       int    `json:"template_id"`
+		TemplateHashName string `json:"template_hash_name"`
+		MinSellPrice     string `json:"min_sell_price"`
+		ReferencePrice   string `json:"reference_price"`
+		SellNum          int    `json:"sell_num"`
+		SuggestedPrice   string `json:"suggested_price"` // 建议价格 = minSellPrice - 0.1
+	}
+
+	var data []PriceData
+	for _, info := range priceInfo.Data {
+		priceData := PriceData{
+			TemplateID:       info.SaleTemplateResponse.TemplateId,
+			TemplateHashName: info.SaleTemplateResponse.TemplateHashName,
+			MinSellPrice:     info.SaleCommodityResponse.MinSellPrice,
+			ReferencePrice:   info.SaleCommodityResponse.ReferencePrice,
+			SellNum:          info.SaleCommodityResponse.SellNum,
+		}
+
+		// 计算建议价格
+		if minPrice, err := strconv.ParseFloat(info.SaleCommodityResponse.MinSellPrice, 64); err == nil {
+			suggestedPrice := minPrice - 0.1
+			if suggestedPrice < 0.01 {
+				suggestedPrice = 0.01
+			}
+			priceData.SuggestedPrice = fmt.Sprintf("%.2f", suggestedPrice)
+		}
+
+		data = append(data, priceData)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    data,
+		"count":   len(data),
+	})
+}
+
+// ShelfSingleItem 单个上架
+// 请求体: { "steam_id": "", "item_asset_id": "", "price": "" (可选), "template_id": 0 (可选用于自动定价) }
+func (h *APIHandler) ShelfSingleItem(c *gin.Context) {
+	var req struct {
+		SteamID     string  `json:"steam_id" binding:"required"`
+		ItemAssetID string  `json:"item_asset_id" binding:"required"`
+		Price       *string `json:"price,omitempty"`       // 如果提供，使用该价格；否则自动定价
+		TemplateID  int     `json:"template_id,omitempty"` // 用于获取市场最低价自动定价
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数格式错误: " + err.Error()})
+		return
+	}
+
+	// 获取活跃的YouPin账户
+	var accounts []models.YouPinAccount
+	if err := h.db.Where("is_active = ?", true).Find(&accounts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取账户列表失败"})
+		return
+	}
+
+	if len(accounts) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未找到有效的悠悠有品账户"})
+		return
+	}
+
+	// 创建OpenAPI客户端
+	openAPIClient, err := youpin.NewOpenAPIClientWithDefaultKeysAndToken(accounts[0].Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建OpenAPI客户端失败: " + err.Error()})
+		return
+	}
+
+	// 确定价格
+	var shelfPrice string
+	if req.Price != nil && *req.Price != "" {
+		// 使用提供的价格
+		shelfPrice = *req.Price
+	} else if req.TemplateID > 0 {
+		// 自动定价：获取市场最低价 - 0.1
+		ctx := c.Request.Context()
+		templateID := req.TemplateID
+		requestList := []youpin.BatchPriceQueryItem{
+			{TemplateID: &templateID},
+		}
+
+		priceInfo, err := openAPIClient.BatchGetOnSaleCommodityInfo(ctx, requestList)
+		if err != nil || len(priceInfo.Data) == 0 {
+			// 自动定价失败，使用默认价格 1.00
+			shelfPrice = "1.00"
+		} else {
+			minPrice := priceInfo.Data[0].SaleCommodityResponse.MinSellPrice
+			if price, err := strconv.ParseFloat(minPrice, 64); err == nil {
+				suggestedPrice := price - 0.01
+				if suggestedPrice < 0.01 {
+					suggestedPrice = 0.01
+				}
+				shelfPrice = fmt.Sprintf("%.2f", suggestedPrice)
+			} else {
+				shelfPrice = "1.00"
+			}
+		}
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "必须提供price或template_id用于定价"})
+		return
+	}
+
+	// 上架物品
+	ctx := c.Request.Context()
+	requestList := []youpin.OnShelfCommodityRequest{
+		{
+			ItemAssetID: req.ItemAssetID,
+			Price:       shelfPrice,
+		},
+	}
+
+	result, err := openAPIClient.OnShelfCommodity(ctx, req.SteamID, requestList)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "上架物品失败: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":   true,
+		"price":     shelfPrice,
+		"item_info": result.Data.ItemInfo,
+		"message":   "物品上架请求已提交",
+	})
+}
+
+// ShelfBatchItems 批量上架
+// 请求体: { "steam_id": "", "items": [{"item_asset_id": "", "template_id": 0}, ...], "unified_price": "" (可选，统一定价) }
+func (h *APIHandler) ShelfBatchItems(c *gin.Context) {
+	var req struct {
+		SteamID string `json:"steam_id" binding:"required"`
+		Items   []struct {
+			ItemAssetID string `json:"item_asset_id" binding:"required"`
+			TemplateID  int    `json:"template_id,omitempty"`
+		} `json:"items" binding:"required,min=1"`
+		UnifiedPrice *string `json:"unified_price,omitempty"` // 如果提供，对所有物品使用该价格
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请求参数格式错误: " + err.Error()})
+		return
+	}
+
+	if len(req.Items) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "物品列表不能为空"})
+		return
+	}
+
+	// 获取活跃的YouPin账户
+	var accounts []models.YouPinAccount
+	if err := h.db.Where("is_active = ?", true).Find(&accounts).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "获取账户列表失败"})
+		return
+	}
+
+	if len(accounts) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "未找到有效的悠悠有品账户"})
+		return
+	}
+
+	// 创建OpenAPI客户端
+	openAPIClient, err := youpin.NewOpenAPIClientWithDefaultKeysAndToken(accounts[0].Token)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建OpenAPI客户端失败: " + err.Error()})
+		return
+	}
+
+	ctx := c.Request.Context()
+	var shelfRequests []youpin.OnShelfCommodityRequest
+
+	// 如果使用统一定价
+	if req.UnifiedPrice != nil && *req.UnifiedPrice != "" {
+		for _, item := range req.Items {
+			shelfRequests = append(shelfRequests, youpin.OnShelfCommodityRequest{
+				ItemAssetID: item.ItemAssetID,
+				Price:       *req.UnifiedPrice,
+			})
+		}
+	} else {
+		// 自动定价：需要为每个物品查询市场最低价
+		// 先收集所有TemplateID
+		var templateIDs []int
+		templateMap := make(map[int]string) // templateID -> 建议价格
+		for _, item := range req.Items {
+			if item.TemplateID > 0 {
+				templateIDs = append(templateIDs, item.TemplateID)
+			}
+		}
+
+		// 如果有TemplateID，批量获取价格信息
+		if len(templateIDs) > 0 {
+			var requestList []youpin.BatchPriceQueryItem
+			for _, tid := range templateIDs {
+				tid := tid // 避免闭包陷阱
+				requestList = append(requestList, youpin.BatchPriceQueryItem{TemplateID: &tid})
+			}
+
+			priceInfo, err := openAPIClient.BatchGetOnSaleCommodityInfo(ctx, requestList)
+			if err == nil && len(priceInfo.Data) > 0 {
+				for _, info := range priceInfo.Data {
+					minPrice := info.SaleCommodityResponse.MinSellPrice
+					if price, parseErr := strconv.ParseFloat(minPrice, 64); parseErr == nil {
+						suggestedPrice := price - 0.1
+						if suggestedPrice < 0.01 {
+							suggestedPrice = 0.01
+						}
+						templateMap[info.SaleTemplateResponse.TemplateId] = fmt.Sprintf("%.2f", suggestedPrice)
+					}
+				}
+			}
+		}
+
+		// 构建上架请求
+		for _, item := range req.Items {
+			var price string
+			if suggestedPrice, exists := templateMap[item.TemplateID]; exists && item.TemplateID > 0 {
+				price = suggestedPrice
+			} else {
+				price = "1.00" // 默认价格
+			}
+
+			shelfRequests = append(shelfRequests, youpin.OnShelfCommodityRequest{
+				ItemAssetID: item.ItemAssetID,
+				Price:       price,
+			})
+		}
+	}
+
+	// 执行批量上架
+	result, err := openAPIClient.OnShelfCommodity(ctx, req.SteamID, shelfRequests)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "批量上架物品失败: " + err.Error()})
+		return
+	}
+
+	// 统计结果
+	successCount := 0
+	failCount := 0
+	for _, info := range result.Data.ItemInfo {
+		if info.OnShelfResult == 1 {
+			successCount++
+		} else {
+			failCount++
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       true,
+		"success_count": successCount,
+		"fail_count":    failCount,
+		"item_info":     result.Data.ItemInfo,
+		"message":       fmt.Sprintf("批量上架完成：成功%d件，失败%d件", successCount, failCount),
+	})
 }

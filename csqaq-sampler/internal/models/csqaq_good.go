@@ -8,6 +8,7 @@ type CSQAQGood struct {
     GoodID          int64                 `json:"good_id" gorm:"uniqueIndex;not null"`
     MarketHashName  string                `json:"market_hash_name" gorm:"index"`
     Name            string                `json:"name" gorm:"index"`
+    YYYPTemplateID  *int64                `json:"yyyp_template_id" gorm:"index"` // 悠悠有品模板ID，从snapshots获取
     CreatedAt       time.Time             `json:"created_at"`
     UpdatedAt       time.Time             `json:"updated_at"`
 

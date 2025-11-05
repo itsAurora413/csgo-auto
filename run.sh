@@ -214,6 +214,12 @@ STEAM_API_KEY=your_steam_api_key_here
 PORT=8080
 ENVIRONMENT=development
 LOG_LEVEL=INFO
+
+# YouPin Open API Configuration
+YOUPIN_USE_OPEN_API=true
+YOUPIN_APP_KEY=your_app_key_here
+YOUPIN_PRIVATE_KEY=your_private_key_here
+YOUPIN_CALLBACK_PUBLIC_KEY=your_callback_public_key_here
 EOF
         fi
     fi
@@ -223,6 +229,34 @@ EOF
         log_warning "请在.env文件中配置你的Steam API Key"
         log_warning "获取地址: https://steamcommunity.com/dev/apikey"
     fi
+
+    # 检查并加载悠悠有品开放平台配置
+    log_info "检查悠悠有品开放平台配置..."
+    source .env
+
+    # 验证开放平台配置（必须配置）
+    if [ -z "$YOUPIN_APP_KEY" ] || [ "$YOUPIN_APP_KEY" = "your_app_key_here" ]; then
+        log_error "❌ 悠悠有品AppKey未配置"
+        log_error "请在.env中配置 YOUPIN_APP_KEY"
+        log_error "获取方式：https://open.youpin898.com"
+        exit 1
+    fi
+
+    if [ -z "$YOUPIN_PRIVATE_KEY" ] || [ "$YOUPIN_PRIVATE_KEY" = "your_private_key_here" ]; then
+        log_error "❌ 悠悠有品私钥未配置"
+        log_error "请在.env中配置 YOUPIN_PRIVATE_KEY"
+        log_error "生成方式：go run cmd/test-youpin-openapi/main.go generate-keys"
+        exit 1
+    fi
+
+    log_success "✅ 悠悠有品开放平台API已配置"
+    log_info "AppKey: ${YOUPIN_APP_KEY:0:8}..."
+
+    # 导出环境变量供后端使用
+    export YOUPIN_USE_OPEN_API="true"
+    export YOUPIN_APP_KEY="$YOUPIN_APP_KEY"
+    export YOUPIN_PRIVATE_KEY="$YOUPIN_PRIVATE_KEY"
+    export YOUPIN_CALLBACK_PUBLIC_KEY="$YOUPIN_CALLBACK_PUBLIC_KEY"
 
     log_success "配置文件检查完成"
 }

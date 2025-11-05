@@ -1,0 +1,157 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                     🎉 增量学习系统 - 从这里开始！                         ║
+║                     📍 位置：docs/incremental_learning/                    ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+【👋 欢迎】
+
+你找到了 CSGO 饰品指数增量学习系统的完整文档库！
+所有文件都整齐地组织在这个文件夹中。
+
+═════════════════════════════════════════════════════════════════════════════
+
+【⚡ 快速导航】
+
+1️⃣  我只有 5 分钟
+   └─ 阅读：README_INCREMENTAL_LEARNING.txt
+
+2️⃣  我想深入了解
+   └─ 阅读：INCREMENTAL_LEARNING_GUIDE.md
+
+3️⃣  我需要快速参考
+   └─ 阅读：INCREMENTAL_LEARNING_QUICK_REF.txt
+
+4️⃣  我想看技术实现
+   └─ 阅读：IMPLEMENTATION_SUMMARY_v2.0.md
+
+5️⃣  我想看完整文档目录
+   └─ 阅读：INDEX.md
+
+6️⃣  我想运行演示脚本
+   └─ 运行：python test_incremental_learning.py
+
+═════════════════════════════════════════════════════════════════════════════
+
+【📂 文件夹内容】
+
+docs/incremental_learning/
+├── 00_START_HERE.txt                         ← 本文件（快速导航）
+├── INDEX.md                                  ← 完整文档索引
+├── README_INCREMENTAL_LEARNING.txt           ← 快速开始指南
+├── INCREMENTAL_LEARNING_QUICK_REF.txt        ← 快速参考卡片
+├── INCREMENTAL_LEARNING_GUIDE.md             ← 完整技术指南
+├── IMPLEMENTATION_SUMMARY_v2.0.md            ← 实现细节总结
+└── test_incremental_learning.py              ← 演示脚本
+
+═════════════════════════════════════════════════════════════════════════════
+
+【📊 文件统计】
+
+总文件数：6 个文档 + 1 个脚本 = 7 个
+总大小：~68 KB
+总行数：~1800+ 行
+
+═════════════════════════════════════════════════════════════════════════════
+
+【🎯 核心功能简述】
+
+✅ 模型持久化
+   自动保存训练好的模型，下次自动加载
+
+✅ 增量学习
+   每次都在上次基础上优化，而不是从零开始
+
+✅ 性能对比
+   自动计算改进幅度（每次 +1~5%）
+
+✅ 训练历史
+   完整的历史记录和追踪
+
+═════════════════════════════════════════════════════════════════════════════
+
+【⚡ 立即开始】
+
+# 在项目根目录运行
+python kline_analyzer.py
+
+# 选择选项 2 开始增量学习
+选择 [1-4]: 2
+
+# 或选择选项 3 查看训练历史
+选择 [1-4]: 3
+
+═════════════════════════════════════════════════════════════════════════════
+
+【💡 根据角色推荐阅读】
+
+【产品经理】
+  1. README_INCREMENTAL_LEARNING.txt
+  2. INCREMENTAL_LEARNING_QUICK_REF.txt
+
+【后端开发】
+  1. INCREMENTAL_LEARNING_GUIDE.md
+  2. IMPLEMENTATION_SUMMARY_v2.0.md
+  3. kline_analyzer.py 源码
+
+【测试人员】
+  1. README_INCREMENTAL_LEARNING.txt
+  2. test_incremental_learning.py
+  3. INCREMENTAL_LEARNING_QUICK_REF.txt
+
+【数据分析】
+  1. INCREMENTAL_LEARNING_GUIDE.md
+  2. IMPLEMENTATION_SUMMARY_v2.0.md
+
+═════════════════════════════════════════════════════════════════════════════
+
+【❓ 常见问题】
+
+Q: 文件在哪里？
+A: 你正在看的就是！所有文件都在 docs/incremental_learning/ 文件夹中
+
+Q: 如何开始使用？
+A: 阅读 README_INCREMENTAL_LEARNING.txt 或运行 python kline_analyzer.py
+
+Q: 我应该看哪个文档？
+A: 查看 INDEX.md 了解每个文档的内容和推荐阅读顺序
+
+Q: 演示脚本在哪里？
+A: test_incremental_learning.py 在本文件夹中
+
+═════════════════════════════════════════════════════════════════════════════
+
+【🔗 相关路径】
+
+主程序：
+  /Users/user/Downloads/csgoAuto/kline_analyzer.py
+
+模型存储：
+  /Users/user/Downloads/csgoAuto/models/
+
+文档文件夹：
+  /Users/user/Downloads/csgoAuto/docs/incremental_learning/
+
+═════════════════════════════════════════════════════════════════════════════
+
+【✨ 下一步】
+
+1️⃣  选择一个文档开始阅读（参考上面的快速导航）
+2️⃣  运行演示脚本了解工作流程
+3️⃣  按照指南开始使用增量学习功能
+4️⃣  监控性能改进并优化参数
+
+═════════════════════════════════════════════════════════════════════════════
+
+【📞 需要帮助？】
+
+所有常见问题都在文档中有详细说明：
+• 快速问题 → INCREMENTAL_LEARNING_QUICK_REF.txt
+• 技术问题 → INCREMENTAL_LEARNING_GUIDE.md
+• 实现细节 → IMPLEMENTATION_SUMMARY_v2.0.md
+
+═════════════════════════════════════════════════════════════════════════════
+
+准备好了吗？选择一个文档，开始探索吧！ 🚀
+
+最后更新：2025-10-23
+版本：v2.0 - 增量学习版

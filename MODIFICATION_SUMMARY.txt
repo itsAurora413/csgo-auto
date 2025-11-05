@@ -1,0 +1,89 @@
+================================================================================
+HTTP 请求头大小写修复 - 完整修改总结
+================================================================================
+
+问题诊断：
+─────────────────────────────────────────────────────────────────────────────
+✗ 你的代码发送的请求失败（错误代码 85100）
+✓ 抓包的请求成功（HTTP 200）
+
+原因：Go 的 http.Header.Set() 方法会自动规范化 Header Key，导致大小写格式错误。
+
+示例：
+  - 代码中写：req.Header.Set("DeviceToken", value)
+  - 实际发送：Devicetoken: value  ❌
+  - 应该发送：DeviceToken: value  ✓
+
+
+修改方案：
+─────────────────────────────────────────────────────────────────────────────
+使用直接 map 访问来绕过 Go 的自动规范化：
+
+替换前：req.Header.Set("DeviceToken", value)
+替换后：req.Header["DeviceToken"] = []string{value}
+
+
+修改文件：
+─────────────────────────────────────────────────────────────────────────────
+文件：internal/services/youpin/client.go
+
+1. makeRequestWithGzip 函数 (行 1369-1407)
+   ✓ 已修改所有 Header.Set() 调用
+   变更数量：18 个
+
+2. SendSMSCode 函数 (行 1604-1617)
+   ✓ 已修改所有 Header.Set() 调用
+   变更数量：14 个
+
+3. LoginWithPhone 函数 (行 1694-1707)
+   ✓ 已修改所有 Header.Set() 调用
+   变更数量：14 个
+
+4. makeOpenAPIRequest 函数 (行 2216-2217)
+   ✓ 已修改所有 Header.Set() 调用
+   变更数量：2 个
+
+总计修改：48 处 Header 设置调用
+
+
+验证修改：
+─────────────────────────────────────────────────────────────────────────────
+✓ 代码编译检查通过
+✓ 所有修改的 Header 都保持原始大小写格式
+✓ 备份文件：client.go.backup
+
+
+预期效果：
+─────────────────────────────────────────────────────────────────────────────
+修改后运行程序时，日志中应显示正确的 Header 格式：
+
+  DeviceToken: aNbW21QU7cUDAJB4bK22q1rk
+  DeviceId: aNbW21QU7cUDAJB4bK22q1rk
+  requestTag: 74DFB82D7D50CE91B14806C20A87FE0A
+  deviceType: 2
+  platform: android
+  deviceUk: 5FQIZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I
+
+而不是修改前的：
+
+  Devicetoken: aNbW21QU7cUDAJB4bK22q1rk ❌
+  Deviceid: aNbW21QU7cUDAJB4bK22q1rk ❌
+  Requesttag: 74DFB82D7D50CE91B14806C20A87FE0A ❌
+  Devicetype: 2 ❌
+  Platform: android ❌
+  Deviceuk: 5FQIZE57VAGa7uQBapxU70o3PHzUYIUevEmrT53gRd8hMLiEMafT7TmLexlKfk51I ❌
+
+
+测试步骤：
+─────────────────────────────────────────────────────────────────────────────
+1. cd /Users/user/Downloads/csgoAuto/cmd/price-monitor
+2. go run main.go
+3. 查看日志中的 "[请求头]:" 部分
+4. 确认所有 Header 格式都正确
+
+预期结果：
+✓ 请求头格式正确
+✓ API 请求应该能够成功
+✓ 不再出现 "系统繁忙,请稍后再试" 的错误
+
+================================================================================

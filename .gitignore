@@ -16,3 +16,16 @@ web/.cache/
 # Local binaries (optional)
 cmd/arbitrage-analyzer/arbitrage-analyzer-linux-amd64
 csqaq-sampler/csqaq-sampler-linux-amd64
+
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*_private_key.txt
+*_rsa_private.txt
+
+# API Keys and Tokens
+**/secrets/
+**/credentials/

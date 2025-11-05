@@ -1,13 +1,5 @@
-2025/10/13 10:22:58 Database initialized successfully
-
-2025/10/13 10:22:58 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:56 [33mSLOW SQL >= 200ms
-[0m[31;1m[219.131ms] [33m[rows:-][35m SELECT DATABASE()[0m
-
-2025/10/13 10:22:58 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:56 [33mSLOW SQL >= 200ms
-[0m[31;1m[440.362ms] [33m[rows:1][35m SELECT SCHEMA_NAME from Information_schema.SCHEMATA where SCHEMA_NAME LIKE 'csgo_trader%' ORDER BY SCHEMA_NAME='csgo_trader' DESC,SCHEMA_NAME limit 1[0m
-
-2025/10/13 10:22:59 [32m/Users/user/Downloads/csgoAuto/internal/database/database.go:56 [33mSLOW SQL >= 200ms
-[0m[31;1m[885.313ms] [33m[rows:-][35m SELECT count(*) FROM INFORMATION_SCHEMA.columns WHERE table_schema = 'csgo_trader' AND table_name = 'csqaq_good_snapshots' AND column_name = 'yyyp_template_id'[0m
+2025/11/03 14:13:56 🔐 悠悠有品: 开放平台API模式 (AppKey: 12919014...)
+2025/11/03 14:14:04 Database initialized successfully
 [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
 
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
@@ -16,12 +8,12 @@
 
 [GIN-debug] GET    /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
 [GIN-debug] HEAD   /static/*filepath         --> github.com/gin-gonic/gin.(*RouterGroup).createStaticHandler.func1 (4 handlers)
-[GIN-debug] GET    /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
-[GIN-debug] HEAD   /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func6 (4 handlers)
-[GIN-debug] GET    /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
-[GIN-debug] HEAD   /manifest.json            --> main.main.(*RouterGroup).StaticFile.func7 (4 handlers)
-[GIN-debug] GET    /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
-[GIN-debug] HEAD   /logo192.png              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] GET    /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] HEAD   /favicon.ico              --> main.main.(*RouterGroup).StaticFile.func8 (4 handlers)
+[GIN-debug] GET    /manifest.json            --> main.main.(*RouterGroup).StaticFile.func9 (4 handlers)
+[GIN-debug] HEAD   /manifest.json            --> main.main.(*RouterGroup).StaticFile.func9 (4 handlers)
+[GIN-debug] GET    /logo192.png              --> main.main.(*RouterGroup).StaticFile.func10 (4 handlers)
+[GIN-debug] HEAD   /logo192.png              --> main.main.(*RouterGroup).StaticFile.func10 (4 handlers)
 [GIN-debug] GET    /                         --> main.main.func2 (4 handlers)
 [GIN-debug] GET    /health                   --> main.main.func3 (4 handlers)
 [GIN-debug] GET    /api/v1/auth/steam/login  --> csgo-trader/internal/api.(*APIHandler).SteamLogin-fm (4 handlers)
@@ -55,8 +47,11 @@
 [GIN-debug] POST   /api/v1/youpin/auto-accept-offer/start --> csgo-trader/internal/api.(*APIHandler).StartAutoAcceptOffer-fm (4 handlers)
 [GIN-debug] GET    /api/v1/youpin/orders     --> csgo-trader/internal/api.(*APIHandler).GetYouPinOrders-fm (4 handlers)
 [GIN-debug] GET    /api/v1/youpin/inventory  --> csgo-trader/internal/api.(*APIHandler).GetYouPinInventory-fm (4 handlers)
+[GIN-debug] GET    /api/v1/youpin/inventory/steam-data --> csgo-trader/internal/api.(*APIHandler).GetSteamInventoryData-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/inventory/commodity-price-info --> csgo-trader/internal/api.(*APIHandler).GetCommodityPriceInfo-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/inventory/on-shelf-single --> csgo-trader/internal/api.(*APIHandler).ShelfSingleItem-fm (4 handlers)
+[GIN-debug] POST   /api/v1/youpin/inventory/on-shelf-batch --> csgo-trader/internal/api.(*APIHandler).ShelfBatchItems-fm (4 handlers)
 [GIN-debug] POST   /api/v1/youpin/send-sms   --> csgo-trader/internal/api.(*APIHandler).SendYouPinSMS-fm (4 handlers)
-[GIN-debug] POST   /api/v1/youpin/login-with-phone --> csgo-trader/internal/api.(*APIHandler).LoginYouPinWithPhone-fm (4 handlers)
 [GIN-debug] POST   /api/v1/youpin/search     --> csgo-trader/internal/api.(*APIHandler).SearchYouPinCommodities-fm (4 handlers)
 [GIN-debug] POST   /api/v1/youpin/search/items --> csgo-trader/internal/api.(*APIHandler).SearchYouPinItems-fm (4 handlers)
 [GIN-debug] POST   /api/v1/youpin/commodity/list --> csgo-trader/internal/api.(*APIHandler).GetYouPinCommodityList-fm (4 handlers)
@@ -86,550 +81,63 @@
 [GIN-debug] GET    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).GetSteamCredentials-fm (4 handlers)
 [GIN-debug] PUT    /api/v1/steam/credentials --> csgo-trader/internal/api.(*APIHandler).UpdateSteamCredentials-fm (4 handlers)
 [GIN-debug] POST   /api/v1/steam/login       --> csgo-trader/internal/api.(*APIHandler).LoginSteamAndGetKey-fm (4 handlers)
-2025/10/13 10:22:59 Server starting on port 8080
-[GIN] 2025/10/13 - 10:23:00 | 200 |     108.291µs |       127.0.0.1 | GET      "/health"
-[GIN] 2025/10/13 - 10:47:10 | 404 |      10.208µs |             ::1 | GET      "/api/v1/analytics/performance"
-[GIN] 2025/10/13 - 10:47:10 | 404 |       10.25µs |             ::1 | GET      "/api/v1/analytics/dashboard"
-[GIN] 2025/10/13 - 10:47:10 | 404 |    1.256625ms |             ::1 | GET      "/manifest.json"
-
-2025/10/13 10:47:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[1042.108ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 10:47:12 | 200 |  1.043333542s |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
+2025/11/03 14:14:06 Server starting on port 8080
+[GIN] 2025/11/03 - 14:14:07 | 200 |      75.584µs |             ::1 | GET      "/health"
+[GIN] 2025/11/03 - 14:14:10 | 200 |    6.140292ms |             ::1 | GET      "/"
+[GIN] 2025/11/03 - 14:14:10 | 200 |    1.530833ms |             ::1 | GET      "/static/css/main.37ea8e9a.css"
+[GIN] 2025/11/03 - 14:14:10 | 200 |     7.00325ms |             ::1 | GET      "/static/js/main.5de8aa53.js"
+[GIN] 2025/11/03 - 14:14:10 | 404 |       4.583µs |             ::1 | GET      "/api/v1/analytics/dashboard"
+[GIN] 2025/11/03 - 14:14:10 | 404 |       2.459µs |             ::1 | GET      "/api/v1/analytics/performance"
+[GIN] 2025/11/03 - 14:14:10 | 404 |      97.416µs |             ::1 | GET      "/manifest.json"
 Successfully bound local IP to CSQAQ API
-[GIN] 2025/10/13 - 10:47:13 | 200 |  741.584167ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-[GIN] 2025/10/13 - 10:47:14 | 200 |    35.74425ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-[GIN] 2025/10/13 - 10:47:14 | 200 |    34.64375ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-[GIN] 2025/10/13 - 10:47:17 | 200 |   69.051667ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-
-2025/10/13 10:47:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[999.069ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',1,2486.171945,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:19 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1111.241ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',2,2489.534910,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:20 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1025.394ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',3,2492.902425,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:21 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1096.217ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',4,2496.274495,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:22 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1126.204ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',5,2499.651126,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[981.010ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',6,2503.032324,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[898.361ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',7,2506.418096,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[1606.845ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 10:47:24 | 200 |  1.608908709s |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
-
-2025/10/13 10:47:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4586 [33mSLOW SQL >= 200ms
-[0m[31;1m[216.717ms] [33m[rows:33][35m SELECT * FROM `purchase_plans` ORDER BY created_at DESC LIMIT 50[0m
-[GIN] 2025/10/13 - 10:47:24 | 200 |  217.255709ms |             ::1 | GET      "/api/v1/youpin/purchase-plans?limit=50"
-
-2025/10/13 10:47:25 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[928.686ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',8,2509.808448,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:26 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[980.115ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',9,2513.203386,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[440.756ms] [33m[rows:100][35m SELECT * FROM `purchase_plan_items` WHERE `purchase_plan_items`.`plan_id` = 40[0m
-
-2025/10/13 10:47:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[878.379ms] [33m[rows:1][35m SELECT * FROM `purchase_plans` WHERE id = '40' ORDER BY `purchase_plans`.`id` LIMIT 1[0m
-[GIN] 2025/10/13 - 10:47:27 | 200 |  878.848167ms |             ::1 | GET      "/api/v1/youpin/purchase-plans/40"
-
-2025/10/13 10:47:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[925.284ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',10,2516.602916,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:28 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[981.585ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',11,2520.007045,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1020.802ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',12,2523.415778,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:30 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1000.599ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',13,2526.829122,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:31 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1089.983ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',14,2530.247083,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:32 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1085.248ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',15,2533.669668,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1014.343ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',16,2537.096882,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[927.943ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',17,2540.528733,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[963.820ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',18,2543.965225,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1024.588ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',19,2547.406366,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[981.444ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',20,2550.852161,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[933.822ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',21,2554.302618,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[927.277ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',22,2557.757741,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[921.903ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',23,2561.217539,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[965.650ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',24,2564.682016,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:41 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[924.688ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',25,2568.151180,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[943.767ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',26,2571.625036,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[1326.139ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',27,2575.103591,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:45 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[925.141ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',28,2578.586852,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[925.715ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',29,2582.074824,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-
-2025/10/13 10:47:46 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1443 [33mSLOW SQL >= 200ms
-[0m[31;1m[922.691ms] [33m[rows:1][35m INSERT INTO `forecast_records` (`index_id`,`interval`,`horizon_days`,`predicted`,`method`,`train_window`,`slope`,`intercept`,`bars_per_day`,`last_close`,`data_points`,`created_at`) VALUES ('1','1day',30,2585.567515,'linreg',200,0.001352,7.548149,1.000000,7.924933,200,'2025-10-13 10:47:17.069')[0m
-[GIN] 2025/10/13 - 10:47:46 | 200 |  29.88811275s |             ::1 | POST     "/api/v1/forecast/run"
-
-2025/10/13 10:47:47 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[927.674ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,1,100,4.382939,84.803942,113.610715,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1118.152ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,2,99,4.473978,85.727719,111.433023,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:49 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[927.677ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,3,99,4.499572,85.834275,108.506909,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:50 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[926.100ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,4,99,4.676608,89.968764,117.721301,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:51 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[924.228ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,5,99,4.742233,91.541492,119.377039,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:53 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1525.596ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,6,99,4.800786,92.904867,123.593648,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:54 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1239.157ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,7,98,4.871992,93.385704,120.770013,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:55 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1036.801ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,8,98,4.895096,93.464196,117.594540,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:56 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1056.664ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,9,98,5.033472,96.801065,126.138838,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:57 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1038.449ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,10,98,5.127628,98.976483,127.972134,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:58 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1057.044ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,11,98,5.179685,100.251907,132.151715,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:47:59 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1076.455ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,12,97,5.223314,100.091732,129.066927,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1018.168ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,13,97,5.244599,100.133109,125.949225,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1040.925ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,14,97,5.364885,103.094374,134.091553,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1075.526ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,15,97,5.497013,106.017283,136.056767,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:03 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1019.673ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,16,97,5.533919,106.935702,140.364044,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:05 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1051.430ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,17,96,5.563097,106.442706,136.970968,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:06 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1051.655ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,18,96,5.568414,106.125439,133.970571,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1048.456ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,19,96,5.705190,109.439592,141.662342,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1327.843ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,20,96,5.833235,112.304849,143.630928,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1048.233ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,21,96,5.869696,113.248517,147.997531,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1047.726ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,22,95,5.900761,112.750725,144.390636,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[976.640ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,23,95,5.949934,113.336026,141.709014,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:12 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[964.778ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,24,95,6.084249,116.553745,148.981248,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[928.190ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,25,95,6.177643,118.671040,150.870813,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:14 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[945.253ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,26,95,6.219855,119.755266,155.522220,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:15 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[974.655ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,27,94,6.290690,119.971239,151.609478,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:16 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[1078.917ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,28,94,6.331439,120.435124,149.149696,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:17 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[980.781ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,29,94,6.432010,122.955885,155.742169,'2025-10-13 10:47:46.969')[0m
-
-2025/10/13 10:48:18 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1707 [33mSLOW SQL >= 200ms
-[0m[31;1m[928.698ms] [33m[rows:1][35m INSERT INTO `forecast_backtests` (`index_id`,`interval`,`method`,`train_window`,`horizon_days`,`points`,`mape`,`mae`,`rmse`,`created_at`) VALUES ('1','1day','linreg',200,30,94,6.511393,124.755932,157.515226,'2025-10-13 10:47:46.969')[0m
-[GIN] 2025/10/13 - 10:48:18 | 200 | 31.377207541s |             ::1 | POST     "/api/v1/forecast/backtest"
-
-2025/10/13 10:48:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[686.389ms] [33m[rows:100][35m SELECT * FROM `purchase_plan_items` WHERE `purchase_plan_items`.`plan_id` = 40[0m
-
-2025/10/13 10:48:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[1146.525ms] [33m[rows:1][35m SELECT * FROM `purchase_plans` WHERE id = '40' ORDER BY `purchase_plans`.`id` LIMIT 1[0m
-[GIN] 2025/10/13 - 10:48:39 | 200 |  1.147219333s |             ::1 | GET      "/api/v1/youpin/purchase-plans/40"
-
-2025/10/13 10:48:52 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[689.736ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 10:48:52 | 200 |  691.160833ms |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
-[GIN] 2025/10/13 - 10:48:59 | 200 |      26.542µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 10:49:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[1149.935ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-
-2025/10/13 10:49:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[228.977ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods`[0m
-
-2025/10/13 10:49:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[283.310ms] [33m[rows:20][35m SELECT * FROM `csqaq_goods` ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 10:49:01 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[614.214ms] [33m[rows:20][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (4,8,9,11,13,14,17,20,21,24,25,26,28,29,30,31,32,35,37,39)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 10:49:01 | 200 |   2.27800875s |             ::1 | GET      "/api/v1/csqaq/goods?search=&page=1&page_size=20"
-[GIN] 2025/10/13 - 10:49:04 | 200 |      41.792µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-[GIN] 2025/10/13 - 10:49:09 | 200 |      24.042µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 10:49:11 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[767.811ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 10:49:11 | 200 |  769.794083ms |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
-
-2025/10/13 11:31:07 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:2191 [33mSLOW SQL >= 200ms
-[0m[31;1m[496.573ms] [33m[rows:1][35m SELECT * FROM `steam_credentials` WHERE user_id = 1 ORDER BY `steam_credentials`.`id` LIMIT 1[0m
-[GIN] 2025/10/13 - 11:31:07 | 200 |  508.078458ms |             ::1 | GET      "/api/v1/steam/credentials"
-[GIN] 2025/10/13 - 11:31:08 | 200 |    1.078209ms |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 11:31:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1811 [33mSLOW SQL >= 200ms
-[0m[31;1m[1376.143ms] [33m[rows:1][35m SELECT * FROM `you_pin_accounts` WHERE user_id = 1 AND `you_pin_accounts`.`deleted_at` IS NULL[0m
-
-2025/10/13 11:31:08 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:1898 [33mSLOW SQL >= 200ms
-[0m[31;1m[1415.244ms] [33m[rows:1][35m SELECT * FROM `you_pin_configs` WHERE user_id = 1 AND `you_pin_configs`.`deleted_at` IS NULL ORDER BY `you_pin_configs`.`id` LIMIT 1[0m
-[GIN] 2025/10/13 - 11:31:08 | 200 |    1.4236705s |             ::1 | GET      "/api/v1/youpin/config"
+[GIN] 2025/11/03 - 14:14:14 | 200 |  267.075375ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/03 - 14:14:14 | 200 |     35.2945ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/03 - 14:14:17 | 200 |   262.29175ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1day"
+[GIN] 2025/11/03 - 14:14:18 | 200 |  407.342292ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"
+[GIN] 2025/11/03 - 14:14:45 | 200 |   28.5246375s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/03 - 14:14:47 | 200 | 28.959874292s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/03 - 14:15:14 | 200 | 28.579059625s |             ::1 | POST     "/api/v1/forecast/backtest"
+[GIN] 2025/11/03 - 14:15:15 | 200 | 28.586680792s |             ::1 | POST     "/api/v1/forecast/backtest"
+[GIN] 2025/11/03 - 14:52:48 | 304 |    5.645792ms |             ::1 | GET      "/"
+[GIN] 2025/11/03 - 14:52:48 | 304 |     426.625µs |             ::1 | GET      "/static/css/main.37ea8e9a.css"
+[GIN] 2025/11/03 - 14:52:48 | 304 |    2.074875ms |             ::1 | GET      "/static/js/main.5de8aa53.js"
+[GIN] 2025/11/03 - 14:52:49 | 404 |     251.875µs |             ::1 | GET      "/api/v1/analytics/dashboard"
+[GIN] 2025/11/03 - 14:52:49 | 404 |     197.458µs |             ::1 | GET      "/api/v1/analytics/performance"
+[GIN] 2025/11/03 - 14:52:49 | 404 |      84.708µs |             ::1 | GET      "/manifest.json"
 Successfully bound local IP to CSQAQ API
-[GIN] 2025/10/13 - 11:31:08 | 200 |  931.265583ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-[GIN] 2025/10/13 - 11:31:08 | 200 |   41.456417ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
-[GIN] 2025/10/13 - 11:31:09 | 200 |   1.89489875s |             ::1 | GET      "/api/v1/youpin/accounts"
-
-2025/10/13 11:31:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[815.688ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-
-2025/10/13 11:31:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[221.834ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods`[0m
-
-2025/10/13 11:31:09 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[242.029ms] [33m[rows:20][35m SELECT * FROM `csqaq_goods` ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 11:31:10 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[532.310ms] [33m[rows:20][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (4,8,9,11,13,14,17,20,21,24,25,26,28,29,30,31,32,35,37,39)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 11:31:10 | 200 |  1.813137084s |             ::1 | GET      "/api/v1/csqaq/goods?search=&page=1&page_size=20"
-[GIN] 2025/10/13 - 11:31:13 | 200 |     115.708µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-[GIN] 2025/10/13 - 11:31:18 | 200 |      58.792µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 11:31:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[1153.239ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-[GIN] 2025/10/13 - 11:31:23 | 200 |      69.209µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 11:31:23 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[539.169ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%沙漠之鹰 | 科林斯遗产 (崭新出厂)%') OR LOWER(market_hash_name) LIKE LOWER('%沙漠之鹰 | 科林斯遗产 (崭新出厂)%') OR CAST(good_id AS CHAR) LIKE '%沙漠之鹰 | 科林斯遗产 (崭新出厂)%'[0m
-
-2025/10/13 11:31:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[482.152ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%沙漠之鹰 | 科林斯遗产 (崭新出厂)%') OR LOWER(market_hash_name) LIKE LOWER('%沙漠之鹰 | 科林斯遗产 (崭新出厂)%') OR CAST(good_id AS CHAR) LIKE '%沙漠之鹰 | 科林斯遗产 (崭新出厂)%' ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 11:31:24 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[510.011ms] [33m[rows:1][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (547)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 11:31:24 | 200 |  2.688194333s |             ::1 | GET      "/api/v1/csqaq/goods?search=%E6%B2%99%E6%BC%A0%E4%B9%8B%E9%B9%B0+%7C+%E7%A7%91%E6%9E%97%E6%96%AF%E9%81%97%E4%BA%A7+(%E5%B4%AD%E6%96%B0%E5%87%BA%E5%8E%82)&page=1&page_size=20"
-[GIN] 2025/10/13 - 11:31:26 | 200 |  102.467833ms |             ::1 | GET      "/api/v1/csqaq/good?id=547"
-
-2025/10/13 11:31:27 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[521.415ms] [33m[rows:19][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 547 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 11:31:27 | 200 |   521.76125ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=547&interval=20m"
-
-2025/10/13 11:31:29 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[454.294ms] [33m[rows:19][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 547 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 11:31:29 | 200 |  454.711375ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=547&interval=1d"
-[GIN] 2025/10/13 - 11:31:42 | 200 |      43.542µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 11:31:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[1182.108ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-
-2025/10/13 11:31:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[226.296ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods`[0m
-
-2025/10/13 11:31:43 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[290.356ms] [33m[rows:20][35m SELECT * FROM `csqaq_goods` ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 11:31:44 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[653.134ms] [33m[rows:20][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (4,8,9,11,13,14,17,20,21,24,25,26,28,29,30,31,32,35,37,39)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 11:31:44 | 200 |  2.353116584s |             ::1 | GET      "/api/v1/csqaq/goods?search=&page=1&page_size=20"
-[GIN] 2025/10/13 - 11:31:47 | 200 |     126.542µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-[GIN] 2025/10/13 - 11:31:52 | 200 |      82.583µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
+[GIN] 2025/11/03 - 14:52:51 | 200 |  331.193583ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/03 - 14:52:52 | 200 |    38.65675ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/03 - 14:52:53 | 200 |   151.26175ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1day"
+[GIN] 2025/11/03 - 14:52:56 | 200 |  311.117917ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"
+[GIN] 2025/11/03 - 14:53:24 | 200 | 30.794432541s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/03 - 14:53:33 | 200 |  37.15287725s |             ::1 | POST     "/api/v1/forecast/run"
+[mysql] 2025/11/03 19:29:26 packets.go:37: read tcp 192.168.116.2:58632->23.254.215.66:3306: read: operation timed out
+[GIN] 2025/11/03 - 19:29:26 | 500 |       5h14m7s |             ::1 | GET      "/api/v1/csqaq/recommendations?limit=50&risk_level=all&type=all"
+[GIN] 2025/11/04 - 09:50:04 | 304 |     44.3485ms |             ::1 | GET      "/"
+[GIN] 2025/11/04 - 09:50:04 | 304 |     394.542µs |             ::1 | GET      "/static/js/main.5de8aa53.js"
+[GIN] 2025/11/04 - 09:50:04 | 304 |     936.916µs |             ::1 | GET      "/static/css/main.37ea8e9a.css"
+[GIN] 2025/11/04 - 09:50:04 | 404 |       9.708µs |             ::1 | GET      "/api/v1/analytics/performance"
+[GIN] 2025/11/04 - 09:50:04 | 404 |      34.792µs |             ::1 | GET      "/api/v1/analytics/dashboard"
+[GIN] 2025/11/04 - 09:50:05 | 404 |    1.241041ms |             ::1 | GET      "/manifest.json"
 Successfully bound local IP to CSQAQ API
-[GIN] 2025/10/13 - 11:31:55 | 200 |     89.5465ms |             ::1 | GET      "/api/v1/csqaq/good?id=24"
-[GIN] 2025/10/13 - 11:31:59 | 200 |        6.27ms |             ::1 | GET      "/csqaq/goods/24"
-[GIN] 2025/10/13 - 11:31:59 | 404 |     667.958µs |             ::1 | GET      "/manifest.json"
-[GIN] 2025/10/13 - 11:31:59 | 200 |   338.24875ms |             ::1 | GET      "/api/v1/csqaq/good?id=24"
-
-2025/10/13 11:32:00 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[450.231ms] [33m[rows:20][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 24 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 11:32:00 | 200 |  450.686417ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=24&interval=20m"
-
-2025/10/13 11:32:02 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[622.993ms] [33m[rows:20][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 24 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 11:32:02 | 200 |  624.478958ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=24&interval=1d"
-
-2025/10/13 14:21:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[1751.158ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 14:21:34 | 200 |  1.767941167s |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
-
-2025/10/13 14:21:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4586 [33mSLOW SQL >= 200ms
-[0m[31;1m[1161.860ms] [33m[rows:34][35m SELECT * FROM `purchase_plans` ORDER BY created_at DESC LIMIT 50[0m
-[GIN] 2025/10/13 - 14:21:34 | 200 |  1.162213625s |             ::1 | GET      "/api/v1/youpin/purchase-plans?limit=50"
-
-2025/10/13 14:21:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[612.588ms] [33m[rows:9][35m SELECT * FROM `purchase_plan_items` WHERE `purchase_plan_items`.`plan_id` = 41[0m
-
-2025/10/13 14:21:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4613 [33mSLOW SQL >= 200ms
-[0m[31;1m[1157.169ms] [33m[rows:1][35m SELECT * FROM `purchase_plans` WHERE id = '41' ORDER BY `purchase_plans`.`id` LIMIT 1[0m
-[GIN] 2025/10/13 - 14:21:37 | 200 |  1.158550375s |             ::1 | GET      "/api/v1/youpin/purchase-plans/41"
-
-2025/10/13 14:42:13 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:4449 [33mSLOW SQL >= 200ms
-[0m[31;1m[768.623ms] [33m[rows:100][35m SELECT * FROM `arbitrage_opportunities` WHERE profit_rate >= 0.050000 AND days_of_data >= 7 ORDER BY score DESC,profit_rate DESC LIMIT 100[0m
-[GIN] 2025/10/13 - 14:42:13 | 200 |  770.605583ms |             ::1 | GET      "/api/v1/youpin/arbitrage/opportunities?min_profit_rate=0.05&min_days_history=7&limit=100"
-[GIN] 2025/10/13 - 14:42:32 | 200 |    1.624792ms |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 14:42:33 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[894.115ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-
-2025/10/13 14:42:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[304.563ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods`[0m
-
-2025/10/13 14:42:34 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[278.835ms] [33m[rows:20][35m SELECT * FROM `csqaq_goods` ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 14:42:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[630.135ms] [33m[rows:20][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (4,8,9,11,13,14,17,20,21,24,25,26,28,29,30,31,32,35,37,39)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 14:42:35 | 200 |  2.110727833s |             ::1 | GET      "/api/v1/csqaq/goods?search=&page=1&page_size=20"
-
-2025/10/13 14:42:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[963.929ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-
-2025/10/13 14:42:35 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[478.581ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR LOWER(market_hash_name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR CAST(good_id AS CHAR) LIKE '%AUG | 三角战术 (略有磨损)%'[0m
-
-2025/10/13 14:42:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[544.243ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR LOWER(market_hash_name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR CAST(good_id AS CHAR) LIKE '%AUG | 三角战术 (略有磨损)%' ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 14:42:36 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[511.885ms] [33m[rows:1][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (230)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 14:42:36 | 200 |  2.499494584s |             ::1 | GET      "/api/v1/csqaq/goods?search=AUG+%7C+%E4%B8%89%E8%A7%92%E6%88%98%E6%9C%AF+(%E7%95%A5%E6%9C%89%E7%A3%A8%E6%8D%9F)&page=1&page_size=20"
-
-2025/10/13 14:42:37 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:795 [33mSLOW SQL >= 200ms
-[0m[31;1m[1020.287ms] [33m[rows:0][35m 
-        DELETE FROM csqaq_good_snapshots
-        WHERE good_id NOT IN (
-            SELECT DISTINCT good_id FROM csqaq_goods
-        )
-    [0m
-[GIN] 2025/10/13 - 14:42:37 | 200 |      29.959µs |             ::1 | GET      "/api/v1/csqaq/init-goods-full/status"
-
-2025/10/13 14:42:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:810 [33mSLOW SQL >= 200ms
-[0m[31;1m[542.117ms] [33m[rows:1][35m SELECT count(*) FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR LOWER(market_hash_name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR CAST(good_id AS CHAR) LIKE '%AUG | 三角战术 (略有磨损)%'[0m
+[GIN] 2025/11/04 - 09:50:08 | 200 |  1.173386708s |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/04 - 09:50:08 | 200 |   37.152958ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/04 - 09:50:08 | 200 |  303.940792ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1day"
+[GIN] 2025/11/04 - 09:50:10 | 200 |  523.154083ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"
+[GIN] 2025/11/04 - 09:50:50 | 200 | 41.482014792s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/04 - 09:50:50 | 200 |  39.98918025s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/04 - 10:39:10 | 404 |      25.583µs |             ::1 | GET      "/api/v1/analytics/performance"
+[GIN] 2025/11/04 - 10:39:10 | 404 |      20.375µs |             ::1 | GET      "/api/v1/analytics/dashboard"
+[GIN] 2025/11/04 - 10:39:10 | 404 |     646.291µs |             ::1 | GET      "/manifest.json"
 Successfully bound local IP to CSQAQ API
-[GIN] 2025/10/13 - 14:42:38 | 200 |  271.192042ms |             ::1 | GET      "/api/v1/csqaq/good?id=230"
-
-2025/10/13 14:42:38 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:811 [33mSLOW SQL >= 200ms
-[0m[31;1m[471.971ms] [33m[rows:1][35m SELECT * FROM `csqaq_goods` WHERE LOWER(name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR LOWER(market_hash_name) LIKE LOWER('%AUG | 三角战术 (略有磨损)%') OR CAST(good_id AS CHAR) LIKE '%AUG | 三角战术 (略有磨损)%' ORDER BY good_id ASC LIMIT 20[0m
-
-2025/10/13 14:42:39 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:845 [33mSLOW SQL >= 200ms
-[0m[31;1m[626.293ms] [33m[rows:1][35m 
-            SELECT
-                s1.good_id as good_id,
-                COUNT(s2.id) as cnt,
-                MAX(s1.created_at) as last,
-                s1.yyyp_sell_price,
-                s1.buff_sell_price
-            FROM csqaq_good_snapshots s1
-            LEFT JOIN csqaq_good_snapshots s2 ON s1.good_id = s2.good_id
-            WHERE s1.good_id IN (230)
-            AND s1.created_at = (
-                SELECT MAX(s3.created_at)
-                FROM csqaq_good_snapshots s3
-                WHERE s3.good_id = s1.good_id
-            )
-            GROUP BY s1.good_id, s1.yyyp_sell_price, s1.buff_sell_price
-        [0m
-[GIN] 2025/10/13 - 14:42:39 | 200 |  2.661457333s |             ::1 | GET      "/api/v1/csqaq/goods?search=AUG+%7C+%E4%B8%89%E8%A7%92%E6%88%98%E6%9C%AF+(%E7%95%A5%E6%9C%89%E7%A3%A8%E6%8D%9F)&page=1&page_size=20"
-[GIN] 2025/10/13 - 14:42:40 | 200 |   51.546167ms |             ::1 | GET      "/csqaq/goods/230"
-[GIN] 2025/10/13 - 14:42:40 | 200 |    1.208209ms |             ::1 | GET      "/static/css/main.37ea8e9a.css"
-[GIN] 2025/10/13 - 14:42:40 | 200 |     10.9955ms |             ::1 | GET      "/static/js/main.d84c7e38.js"
-[GIN] 2025/10/13 - 14:42:40 | 404 |     900.334µs |             ::1 | GET      "/manifest.json"
-[GIN] 2025/10/13 - 14:42:40 | 200 |   66.669458ms |             ::1 | GET      "/api/v1/csqaq/good?id=230"
-
-2025/10/13 14:42:40 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[553.192ms] [33m[rows:18][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 230 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 14:42:40 | 200 |  553.652666ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=230&interval=20m"
-
-2025/10/13 14:42:42 [32m/Users/user/Downloads/csgoAuto/internal/api/api.go:928 [33mSLOW SQL >= 200ms
-[0m[31;1m[513.830ms] [33m[rows:18][35m SELECT * FROM `csqaq_good_snapshots` WHERE good_id = 230 ORDER BY created_at asc[0m
-[GIN] 2025/10/13 - 14:42:42 | 200 |  514.129291ms |             ::1 | GET      "/api/v1/csqaq/good/kline?id=230&interval=1d"
+[GIN] 2025/11/04 - 10:39:11 | 200 |  302.933292ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/04 - 10:39:11 | 200 |    36.43875ms |             ::1 | GET      "/api/v1/sub/kline?id=1&type=1day"
+[GIN] 2025/11/04 - 10:39:13 | 200 |  169.042125ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1day"
+[GIN] 2025/11/04 - 10:39:14 | 200 |     228.904ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"
+[GIN] 2025/11/04 - 10:39:21 | 200 |   77.235458ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1day"
+[GIN] 2025/11/04 - 10:39:42 | 200 | 28.980665125s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/04 - 10:39:44 | 200 | 29.856983417s |             ::1 | POST     "/api/v1/forecast/run"
+[GIN] 2025/11/04 - 10:39:59 | 200 |  38.79623675s |             ::1 | POST     "/api/v1/forecast/run"
+Successfully bound local IP to CSQAQ API
+[GIN] 2025/11/04 - 11:06:31 | 200 |  502.356875ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"
+[GIN] 2025/11/04 - 11:06:34 | 200 |     358.051ms |             ::1 | GET      "/api/v1/sub/kline?id=3&type=1hour"

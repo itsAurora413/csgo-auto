@@ -1,0 +1,105 @@
+================================================================================
+                    双账号采样器 - 快速启动指南
+================================================================================
+
+🚀 一行命令启动:
+================================================================================
+cd /Users/user/Downloads/csgoAuto/csqaq-sampler && ./sampler-openapi-pipeline -dual-account
+
+📊 预期性能:
+================================================================================
+✅ 采样时间: 5-6分钟 → 2.5-3分钟 (减半！)
+✅ 工作线程: 6个 + 6个 = 12个总线程
+✅ 账号分工: 账号A(前50%) 和 账号B(后50%)同时处理
+
+🔧 账号配置:
+================================================================================
+账号A (ID: 1645231):
+  APIKey: 1645231
+  Token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5MWM3ZDUyOWIwMzk0NGRiOTFlMDllYjNmMDUzMzgxZiIsIm5hbWVpZCI6IjE2NDUyMzEiLCJJZCI6IjE2NDUyMzEiLCJ1bmlxdWVfbmFtZSI6IllQMDAwMTY0NTIzMSIsIk5hbWUiOiJZUDAwMDE2NDUyMzEiLCJ2ZXJzaW9uIjoickdaIiwibmJmIjoxNzYxODI5NTE2LCJleHAiOjE3NjI2OTM1MTYsImlzcyI6InlvdXBpbjg5OC5jb20iLCJkZXZpY2VJZCI6ImU3ZGYzOWQ1LTEzZjYtNDZmMS1hNDI0LTFmZDU5YjU4NTk4OCIsImF1ZCI6InVzZXIifQ.x0jZzw6RCNcpyzA8CrB5MIJFYVzpDrKBvfmnYZVrvng
+
+账号B (ID: 12919014):
+  APIKey: 12919014
+  Token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiIzYTZlNDA3ODZmOTM0YzM2YTIyOGU0MmUzMDA1MWY1ZSIsIm5hbWVpZCI6IjEyOTE5MDE0IiwiSWQiOiIxMjkxOTAxNCIsInVuaXF1ZV9uYW1lIjoiWVAwMDEyOTE5MDE0IiwiTmFtZSI6IllQMDAxMjkxOTAxNCIsInZlcnNpb24iOiJIbkUiLCJuYmYiOjE3NTg5MTAyMzMsImV4cCI6MTc2MTY0MjYzMywiaXNzIjoieW91cGluODk4LmNvbSIsImRldmljZUlkIjoiYU5iVzIxUVU3Y1VEQUpCNGJLMjIxcjkuNqxrIiwiYXVkIjoidXNlciJ9.mi5QkQKAcrHQpTPCQKDkZkDycpGpYApdoRnuzBArflA
+
+📝 启动参数示例:
+================================================================================
+# 基础启动（默认配置）
+./sampler-openapi-pipeline -dual-account
+
+# 自定义线程数
+./sampler-openapi-pipeline -dual-account -num-workers=8
+
+# 使用代理
+./sampler-openapi-pipeline -dual-account \
+  -use-proxy=true \
+  -proxy-url="hk.novproxy.io:1000" \
+  -proxy-user="xkuq4621-region-US" \
+  -proxy-pass="58hb6rzr"
+
+# 不使用代理
+./sampler-openapi-pipeline -dual-account -use-proxy=false
+
+🔍 监控日志:
+================================================================================
+启动后会看到:
+[双账号采样器] 启动采样器
+[双账号采样器] ├─ 账号A (ID: 1645231): 6 个工作线程
+[双账号采样器] └─ 账号B (ID: 12919014): 6 个工作线程
+账号A - YouPin OpenAPI客户端初始化成功
+账号B - YouPin OpenAPI客户端初始化成功
+...
+[双账号采样器] 开始采样周期 (200 个商品)
+[双账号采样器] ├─ 账号A 处理商品 100 个
+[双账号采样器] └─ 账号B 处理商品 100 个
+
+进度输出:
+[双账号采样器] [账号A] [进度 50/100 50.0%] 成功: 45, 失败: 5
+[双账号采样器] [账号B] [进度 50/100 50.0%] 成功: 48, 失败: 2
+
+完成统计:
+[双账号采样器] ===== 周期完成 =====
+[双账号采样器] 总耗时: 2m35s
+[双账号采样器] 账号A: 成功 95, 失败 5
+[双账号采样器] 账号B: 成功 98, 失败 2
+[双账号采样器] 总计: 成功 193, 失败 7
+
+💾 数据存储:
+================================================================================
+采样数据保存到: csqaq_good_snapshots 表
+字段:
+  - good_id: 商品ID
+  - yyyp_template_id: 模板ID
+  - yyyp_sell_price: 售价
+  - yyyp_sell_count: 在售数
+  - yyyp_buy_price: 求购价
+  - created_at: 采样时间
+
+🛠️ 编译:
+================================================================================
+如需重新编译:
+cd /Users/user/Downloads/csgoAuto/csqaq-sampler
+go build -o sampler-openapi-pipeline ./main.go
+
+❓ 常见问题:
+================================================================================
+Q: Token过期怎么办?
+A: 更新 main.go 中的 deviceTokenA 或 deviceTokenB
+
+Q: 采样速度慢?
+A: 检查代理连接，或增加 -num-workers 参数
+
+Q: 某个账号初始化失败?
+A: 检查网络和代理配置，查看日志错误信息
+
+Q: 如何切换为单账号模式?
+A: 去掉 -dual-account 参数，或改为 -openapi 模式
+
+📋 完整文档:
+================================================================================
+详细文档: /Users/user/Downloads/csgoAuto/DUAL_ACCOUNT_IMPLEMENTATION.md
+快速开始: /Users/user/Downloads/csgoAuto/csqaq-sampler/DUAL_ACCOUNT_QUICK_START.md
+
+================================================================================
+                         准备好了！按照上面的命令启动吧! 🚀
+================================================================================

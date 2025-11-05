@@ -6,25 +6,30 @@ import (
 	"csgo-trader/internal/models"
 	"csgo-trader/internal/services/youpin"
 	"flag"
+	"fmt"
 	"log"
 	"math"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
-	"strconv"
+	"encoding/json"
+	"os"
+	"sync"
+	"sync/atomic"
 
+	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
-	// "sync"
-	// "sync/atomic"
 )
 
 var (
-	minProfitRate      = flag.Float64("min-profit", 0.05, "最小利润率 (默认 5%)")
+	minProfitRate      = flag.Float64("min-profit", 0.08, "最小利润率 (默认 8%，优化后从5%提升)")
 	minDaysHistory     = flag.Int("min-days", 7, "最少历史天数（默认 3天，没有足够数据时按当前价差判断）")
 	budget             = flag.Float64("budget", 2000, "求购总预算（默认 2000元，可自定义）")
-	minSellCount       = flag.Int("min-sell-count", 100, "最少在售数量（默认 100件，确保流动性）")
-	minBuyCount        = flag.Int("min-buy-count", 10, "最少求购数量（默认 10件，确保需求）")
+	minSellCount       = flag.Int("min-sell-count", 150, "最少在售数量（默认 150件，从100提升以确保流动性）")
+	minBuyCount        = flag.Int("min-buy-count", 20, "最少求购数量（默认 20件，从10提升以确保需求）")
 	maxReasonablePrice = flag.Float64("max-price", 10000, "最高合理价格（默认 10000元，过滤异常价格）")
 	maxPriceSpread     = flag.Float64("max-spread", 2.0, "最大价差倍数（默认 2.0倍，售价不超过求购价的2倍）")
 	once               = flag.Bool("once", false, "只运行一次，不循环")
@@ -32,7 +37,97 @@ var (
 	backtest           = flag.Bool("backtest", false, "回测模式：使用7天前的预测对比实际收益")
 	backtestDays       = flag.Int("backtest-days", 7, "回测天数（默认7天）")
 	ypTimeoutSec       = flag.Int("yp-timeout", 20, "YouPin接口调用超时(秒)，默认20s")
+	concurrency        = flag.Int("concurrency", 10, "并发线程数（默认10，用于加速商品分析）")
+	autoPurchase       = flag.Bool("auto-purchase", false, "验证通过后自动实时下单求购（默认关闭）")
+	onlyBottomRebound  = flag.Bool("only-bottom", false, "只看能抄底的饰品：前期下跌+当前反弹（默认关闭，关闭时为全量分析）")
+	// ===== 新增：反弹幅度控制参数（追稳而非追涨）=====
+	minRebound           = flag.Float64("min-rebound", 0.50, "反弹恢复率下限（默认50%：必须恢复跌幅的50%才认为有效反弹，从30%提升）")
+	maxRebound           = flag.Float64("max-rebound", 0.80, "反弹恢复率上限（默认80%：反弹不能超过跌幅的80%，防止追涨）")
+	maxAbsoluteRebound1d = flag.Float64("max-rebound-1d", 0.05, "单日反弹幅度上限（默认5%：一天内反弹不超过5%，防止高位接盘）")
+	minAbsoluteRebound   = flag.Float64("min-rebound-abs", 0.03, "反弹绝对幅度下限（默认3%：最少要反弹3%，从2%提升）")
 )
+
+// BlacklistCache 黑名单缓存（template_id -> 商品名称）
+var blacklistCache map[int64]string
+var blacklistLock sync.RWMutex
+
+// loadBlacklist 从 Excel 文件加载黑名单
+func loadBlacklist(filepath string) (map[int64]string, error) {
+	blacklistCache = make(map[int64]string)
+
+	// 检查文件是否存在
+	if _, err := os.Stat(filepath); os.IsNotExist(err) {
+		log.Printf("[黑名单] 黑名单文件不存在: %s，跳过加载", filepath)
+		return blacklistCache, nil
+	}
+
+	f, err := excelize.OpenFile(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("打开黑名单文件失败: %w", err)
+	}
+	defer f.Close()
+
+	// 获取第一个 Sheet
+	sheets := f.GetSheetList()
+	if len(sheets) == 0 {
+		return blacklistCache, nil
+	}
+
+	sheetName := sheets[0]
+	rows, err := f.GetRows(sheetName)
+	if err != nil {
+		return nil, fmt.Errorf("读取黑名单 Sheet 失败: %w", err)
+	}
+
+	// 跳过表头，从第2行开始读取
+	for i := 1; i < len(rows); i++ {
+		row := rows[i]
+		if len(row) < 2 {
+			continue
+		}
+
+		// 第1列是 id，第2列是 template_id，第4列是 template_name
+		templateIDStr := row[1]
+		var templateName string
+		if len(row) > 3 {
+			templateName = row[3]
+		}
+
+		// 将 template_id 转换为 int64
+		if templateIDStr == "" {
+			continue
+		}
+		templateID, err := strconv.ParseInt(templateIDStr, 10, 64)
+		if err != nil {
+			continue
+		}
+
+		blacklistCache[templateID] = templateName
+	}
+
+	log.Printf("[黑名单] 成功加载 %d 条黑名单记录", len(blacklistCache))
+	return blacklistCache, nil
+}
+
+// isBlacklisted 检查商品是否在黑名单中
+func isBlacklisted(goodID int64, db *gorm.DB) bool {
+	blacklistLock.RLock()
+	defer blacklistLock.RUnlock()
+
+	// 如果黑名单为空，从数据库快照获取 template_id
+	if len(blacklistCache) == 0 {
+		return false
+	}
+
+	// 从 CSQAQGoodSnapshot 获取该商品的 template_id
+	var snapshot models.CSQAQGoodSnapshot
+	if err := db.Where("good_id = ?", goodID).Order("created_at DESC").First(&snapshot).Error; err == nil && snapshot.YYYPTemplateID != nil {
+		_, exists := blacklistCache[*snapshot.YYYPTemplateID]
+		return exists
+	}
+
+	return false
+}
 
 // isMainWeapon 判断是否是主战武器（热门武器）
 func isMainWeapon(name string) bool {
@@ -329,10 +424,33 @@ func calculateTrendByLinearRegression(prices []float64) (string, float64, float6
 
 	// R² < 0.3 说明线性关系不明显，趋势不可靠
 	if rSquared < 0.3 {
-		trend = "stable"
-	} else if slopePercent > 1.5 { // 每天涨超过1.5%
+		// 数据拟合度差时，使用最高价和最低价来判断趋势
+		minPrice := prices[0]
+		maxPrice := prices[0]
+		for _, p := range prices {
+			if p < minPrice {
+				minPrice = p
+			}
+			if p > maxPrice {
+				maxPrice = p
+			}
+		}
+
+		// 最近的价格（最后一个）
+		recentPrice := prices[len(prices)-1]
+		priceChangePercent := ((recentPrice - maxPrice) / maxPrice) * 100
+
+		// 如果最近价格相对高点下跌超过1%，认为是下跌趋势
+		if priceChangePercent < -1.0 {
+			trend = "down"
+		} else if priceChangePercent > 1.0 {
+			trend = "up"
+		} else {
+			trend = "stable"
+		}
+	} else if slopePercent > 1.0 { // 每个时间单位涨超过1%
 		trend = "up"
-	} else if slopePercent < -1.5 { // 每天跌超过1.5%
+	} else if slopePercent < -1.0 { // 每个时间单位跌超过1%
 		trend = "down"
 	} else {
 		trend = "stable"
@@ -373,7 +491,7 @@ func analyzeTrendWithBothPrices(buyPrices []float64, sellPrices []float64) (stri
 			finalTrend = "up"
 		} else if sellTrend == "down" && buyTrend != "up" {
 			finalTrend = "down"
-		} else if sellTrend == sellTrend { // 两个趋势一致
+		} else if sellTrend == buyTrend { // 两个趋势一致
 			finalTrend = sellTrend
 		}
 	} else if buyR2 >= 0.3 && len(buyPrices) >= 3 {
@@ -434,7 +552,7 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 	case "medium":
 		riskScore = 9.0
 	case "high":
-		riskScore = 3.0 // 高风险低分
+		riskScore = 1.5 // 高风险低分（从3.0降至1.5，进一步降低高风险权重）
 	}
 	score += riskScore
 
@@ -505,6 +623,33 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 		score += 2.0
 	}
 
+	// === 8.5 热度评分（权重5%）⭐新增⭐===
+	// 热度排名越低（数字越小）说明越热门，评分越高
+	// 热度排名反映市场关注度：排名1-10（超热）、11-50（热门）、51-100（中等）、100以上（冷门）
+	heatScore := 0.0
+	if opp.RankNum != nil && *opp.RankNum > 0 {
+		rankNum := *opp.RankNum
+		if rankNum <= 500 {
+			heatScore = 5.0 // 排名1-10：超热门商品，最高分
+		} else if rankNum <= 800 {
+			heatScore = 4.5 // 排名11-30：很热门
+		} else if rankNum <= 1000 {
+			heatScore = 4.0 // 排名31-50：热门
+		} else if rankNum <= 3000 {
+			heatScore = 3.5 // 排名51-100：中等热度
+		} else if rankNum <= 5000 {
+			heatScore = 3.0 // 排名101-200：中等热度
+		} else if rankNum <= 10000 {
+			heatScore = 2.5 // 排名201-500：中等热度
+		} else {
+			heatScore = 0.5 // 排名200以上：冷门商品
+		}
+	} else {
+		// 无热度数据时，给予中等分数
+		heatScore = 2.5
+	}
+	score += heatScore
+
 	// === 9. 市场周期评分（权重12%）⭐新增⭐===
 	// 短期持有策略的核心：在底部买入，上涨初期买入
 	// 注意：这里无法获取历史价格数组，所以基于已有字段估算
@@ -553,97 +698,58 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 	return score
 }
 
-// calculateOptimalQuantity 计算最优购买数量（凯利公式思想 + 动态预算分配）
-// 注意：为了降低风险，每件饰品最多购买5件
+// calculateOptimalQuantity 计算最优购买数量（保守策略）
+// 购买数量策略：
+// - 默认1个（保守策略）
+// - 只有在盈利非常多 OR 盈利几率很大 的情况下才增加到3个
 func calculateOptimalQuantity(opp *models.ArbitrageOpportunity, remainingBudget float64, totalBudget float64, currentRank int, totalOpportunities int) int {
 	buyPrice := opp.RecommendedBuyPrice
 
-	// === 1. 基于风险的仓位控制（类似凯利公式）===
-	var baseQuantity int
-	switch opp.RiskLevel {
-	case "low":
-		baseQuantity = 3 // 低风险
-	case "medium":
-		baseQuantity = 2 // 中风险
-	case "high":
-		baseQuantity = 1 // 高风险
-	}
+	// === 基础逻辑：默认购买1个 ===
+	quantity := 1
 
-	// === 2. 蓝筹股加仓（主战武器）===
-	if isMainWeapon(opp.GoodName) {
-		baseQuantity += 1 // 主战武器适度加仓
-	}
-
-	// === 3. 优质资产加仓（崭新磨损）===
-	wearScore := getWearScore(opp.GoodName)
-	if wearScore >= 4.0 { // 崭新或略磨
-		baseQuantity += 1
-	}
-
-	// === 4. 流动性调整（做市商思维）===
-	bidAskRatio := float64(opp.BuyOrderCount) / float64(opp.SellOrderCount+1)
-	if bidAskRatio > 0.5 && opp.SellOrderCount >= 150 {
-		// 买卖活跃，流动性好
-		baseQuantity += 1
-	} else if opp.SellOrderCount < 100 {
-		// 流动性差，适当减仓
-		if baseQuantity > 1 {
-			baseQuantity -= 1
-		}
-	}
-
-	// === 5. 价格区间调整（市值因子）===
-	if buyPrice > 500 {
-		// 高价商品：控制数量，降低风险
-		baseQuantity = int(math.Min(float64(baseQuantity), 2)) // 高价商品最多2件
-	} else if buyPrice < 50 {
-		// 低价商品可以适度多买
-		baseQuantity += 1
-	}
-
-	// === 6. 趋势跟随策略===
-	if opp.PriceTrend == "up" && opp.RiskLevel == "low" {
-		// 上涨趋势+低风险，可以加仓
-		baseQuantity += 1
-	} else if opp.PriceTrend == "down" {
-		// 下跌趋势减仓
-		if baseQuantity > 1 {
-			baseQuantity -= 1
-		}
-	}
-
-	// === 7. 排名加权（TOP商品获得更多预算）- 温和调整===
-	if currentRank <= 10 {
-		// TOP 10 商品额外加仓
-		baseQuantity = int(math.Min(float64(baseQuantity)+1, 5))
-	} else if currentRank <= 30 {
-		// TOP 30 商品小幅加仓
-		if baseQuantity < 5 {
-			baseQuantity += 1
-		}
-	}
-
-	// === 8. 预算约束检查===
+	// === 检查预算是否允许 ===
 	maxQuantity := int(remainingBudget / buyPrice)
 	if maxQuantity == 0 {
 		return 0
 	}
+	if maxQuantity < 1 {
+		return 0
+	}
 
-	quantity := baseQuantity
+	// === 下跌趋势直接返回1个（最重要的风险因素） ===
+	// 如果售价在下跌，即使利润率再高也不应该加仓
+	if opp.PriceTrend == "down" {
+		return 1
+	}
+
+	// === 判断是否应该加仓到3个 ===
+	// 条件1：盈利非常多（利润率 >= 15%）
+	veryHighProfit := opp.ProfitRate >= 0.15
+
+	// 条件2：盈利几率很大（低风险 + 稳定或上涨趋势 + 充足历史数据）
+	highProbabilityProfit := opp.RiskLevel == "low" &&
+		(opp.PriceTrend == "up" || opp.PriceTrend == "stable") &&
+		opp.DaysOfData >= 5 &&
+		opp.ProfitRate >= 0.08 // 至少8%的利润
+
+	// 条件3：流动性很好且利润合理（高买卖比 + 足够的在售数量 + 合理利润率）
+	goodLiquidityWithProfit := float64(opp.BuyOrderCount)/float64(opp.SellOrderCount+1) > 0.6 &&
+		opp.SellOrderCount >= 200 &&
+		opp.ProfitRate >= 0.10
+
+	// 只有满足以上条件之一，且数量不超过预算时，才增加到3个
+	if (veryHighProfit || highProbabilityProfit || goodLiquidityWithProfit) && maxQuantity >= 3 {
+		quantity = 3
+	}
+
+	// === 检查预算限制 ===
 	if quantity > maxQuantity {
 		quantity = maxQuantity
 	}
 
-	// === 9. 硬性上限：每件饰品最多5件（风险控制） ===
-	// 这是最重要的风险控制措施，防止单一饰品损失过大
-	maxPositionLimit := 5
-
-	if quantity > maxPositionLimit {
-		quantity = maxPositionLimit
-	}
-
-	// === 10. 确保至少买1件（如果预算允许）===
-	if quantity < 1 && maxQuantity >= 1 {
+	// === 高风险商品始终只买1个 ===
+	if opp.RiskLevel == "high" {
 		quantity = 1
 	}
 
@@ -880,6 +986,830 @@ func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
 
 	log.Printf("==========================================================================")
 	log.Printf("[回测报告] 分析完成")
+
+	// === 生成回测结果 JSON 文件 ===
+	backtestJSON := map[string]interface{}{
+		"timestamp":     time.Now().Format("2006-01-02 15:04:05"),
+		"analysis_time": analysisTime.Format("2006-01-02 15:04:05"),
+		"summary": map[string]interface{}{
+			"sample_count":          len(results),
+			"total_investment":      totalInvestment,
+			"predicted_profit":      totalPredictedProfit,
+			"predicted_roi_percent": predictedROI,
+			"actual_profit":         totalActualProfit,
+			"actual_roi_percent":    actualROI,
+			"success_rate_percent":  successRate,
+			"avg_accuracy_percent":  avgAccuracy,
+			"profit_difference":     profitDiff,
+			"profit_diff_percent":   profitDiffPercent,
+		},
+		"details": results,
+	}
+
+	jsonBytes, _ := json.MarshalIndent(backtestJSON, "", "  ")
+	os.WriteFile("backtest_result.json", jsonBytes, 0644)
+	log.Printf("[输出] 回测结果已保存到: backtest_result.json")
+
+	// === 保存策略调整日志 ===
+	SaveAdjustmentLog("strategy_adjustment_log.txt")
+	log.Printf("[输出] 策略调整日志已保存到: strategy_adjustment_log.txt")
+}
+
+// VerificationResult 验证结果
+type VerificationResult struct {
+	GoodID            int64
+	GoodName          string
+	OriginalBuyPrice  float64 // 原始求购价
+	OriginalSellPrice float64 // 原始售价
+	VerifiedBuyPrice  float64 // 验证后的求购价
+	VerifiedSellPrice float64 // 验证后的售价
+	IsStillValid      bool    // 是否仍然符合套利条件
+	Reason            string  // 不符合的原因
+	ProfitRateChange  float64 // 利润率变化（新利润率 - 原利润率）
+}
+
+// PurchaseListItem 购买清单项
+type PurchaseListItem struct {
+	GoodID   int64
+	GoodName string
+	Quantity int
+	Price    float64
+	Total    float64
+}
+
+// verifyOpportunitiesPrices 第二阶段验证：再次获取实时价格，确保套利机会仍然有效
+// 只验证purchaseList中的饰品（根据预算确定的最终购买清单）
+// 使用NovProxy代理 + 双线程查询模式，每个线程独立的频率限制（250ms间隔）
+func verifyOpportunitiesPrices(db *gorm.DB, ypClient *youpin.OpenAPIClient, opportunities []models.ArbitrageOpportunity, purchaseList interface{}, timeoutSec int) []models.ArbitrageOpportunity {
+	if ypClient == nil {
+		log.Printf("[二次验证] OpenAPI客户端未初始化，跳过验证")
+		return opportunities
+	}
+
+	if len(opportunities) == 0 {
+		log.Printf("[二次验证] 没有套利机会需要验证")
+		return opportunities
+	}
+
+	// 构建购买清单中的GoodID集合（用于过滤）以及明细映射（用于获取数量）
+	purchaseGoodIDSet := make(map[int64]bool)
+	purchaseItemMap := make(map[int64]PurchaseListItem)
+	if purchaseList != nil {
+		// 尝试用反射遍历purchaseList的元素
+		listVal := reflect.ValueOf(purchaseList)
+		if listVal.Kind() == reflect.Slice {
+			for i := 0; i < listVal.Len(); i++ {
+				elem := listVal.Index(i)
+				if elem.Kind() == reflect.Struct {
+					// 从结构体中获取GoodID字段
+					goodIDField := elem.FieldByName("GoodID")
+					if goodIDField.IsValid() && goodIDField.Kind() == reflect.Int64 {
+						gid := goodIDField.Int()
+						purchaseGoodIDSet[gid] = true
+						// 额外收集数量、名称、价格等信息
+						var item PurchaseListItem
+						item.GoodID = gid
+						if nameField := elem.FieldByName("GoodName"); nameField.IsValid() {
+							if nameField.Kind() == reflect.String {
+								item.GoodName = nameField.String()
+							}
+						}
+						if qtyField := elem.FieldByName("Quantity"); qtyField.IsValid() {
+							switch qtyField.Kind() {
+							case reflect.Int, reflect.Int32, reflect.Int64:
+								item.Quantity = int(qtyField.Int())
+							}
+						}
+						if priceField := elem.FieldByName("Price"); priceField.IsValid() && priceField.Kind() == reflect.Float64 {
+							item.Price = priceField.Float()
+						}
+						if totalField := elem.FieldByName("Total"); totalField.IsValid() && totalField.Kind() == reflect.Float64 {
+							item.Total = totalField.Float()
+						}
+						purchaseItemMap[item.GoodID] = item
+					}
+				}
+			}
+		}
+	}
+
+	// 如果purchaseList为空，则不进行验证
+	if len(purchaseGoodIDSet) == 0 {
+		log.Printf("[二次验证] 购买清单为空，跳过二次验证")
+		return []models.ArbitrageOpportunity{}
+	}
+
+	// 过滤出在购买清单中的套利机会
+	toVerify := []models.ArbitrageOpportunity{}
+	for _, opp := range opportunities {
+		if purchaseGoodIDSet[opp.GoodID] {
+			toVerify = append(toVerify, opp)
+		}
+	}
+
+	log.Printf("[二次验证] 开始验证 %d 个套利机会的实时价格... (双线程，从购买清单中筛选)", len(toVerify))
+
+	// 双线程处理
+	var wg sync.WaitGroup
+	taskChan := make(chan models.ArbitrageOpportunity, 2)
+	resultChan := make(chan VerificationResult, len(toVerify))
+
+	validCount := int64(0)
+	invalidCount := int64(0)
+	processedCount := int64(0)
+
+	// 两个处理线程（每个线程独立的速率限制）
+	for w := 0; w < 2; w++ {
+		wg.Add(1)
+		go func(wid int) {
+			defer wg.Done()
+
+			// 每个线程独立的速率限制：500ms/请求
+			threadRateLimiter := time.NewTicker(2 * time.Second)
+			defer threadRateLimiter.Stop()
+
+			for opp := range taskChan {
+				// 等待当前线程的速率限制
+				<-threadRateLimiter.C
+
+				// 获取该商品的TemplateID
+				var snapshot models.CSQAQGoodSnapshot
+				if err := db.Where("good_id = ? AND yyyp_template_id IS NOT NULL", opp.GoodID).
+					Order("created_at DESC").
+					First(&snapshot).Error; err != nil || snapshot.YYYPTemplateID == nil || *snapshot.YYYPTemplateID == 0 {
+					log.Printf("[二次验证] [Worker-%d] 商品 %d 缺少TemplateID，跳过验证", wid, opp.GoodID)
+					result := VerificationResult{
+						GoodID:            opp.GoodID,
+						GoodName:          opp.GoodName,
+						OriginalBuyPrice:  opp.CurrentBuyPrice,
+						OriginalSellPrice: opp.CurrentSellPrice,
+						VerifiedBuyPrice:  opp.CurrentBuyPrice,
+						VerifiedSellPrice: opp.CurrentSellPrice,
+						IsStillValid:      true,
+					}
+					resultChan <- result
+					atomic.AddInt64(&processedCount, 1)
+					continue
+				}
+
+				// 获取最新的实时价格
+				rp, reason := fetchRealtimePrice(db, ypClient, nil, opp.GoodID, opp.GoodName, timeoutSec)
+
+				// 构建验证结果
+				result := VerificationResult{
+					GoodID:            opp.GoodID,
+					GoodName:          opp.GoodName,
+					OriginalBuyPrice:  opp.CurrentBuyPrice,
+					OriginalSellPrice: opp.CurrentSellPrice,
+				}
+
+				// 检查是否获取成功
+				if !rp.ok {
+					log.Printf("[二次验证] [Worker-%d] 商品 %s 获取实时价格失败: %s，保持原价", wid, opp.GoodName, reason)
+					result.VerifiedBuyPrice = opp.CurrentBuyPrice
+					result.VerifiedSellPrice = opp.CurrentSellPrice
+					result.IsStillValid = true // 获取失败时保持原有机会
+				} else {
+					result.VerifiedBuyPrice = rp.buy
+					result.VerifiedSellPrice = rp.sell
+
+					// 验证是否仍然满足套利条件
+					if result.VerifiedSellPrice <= 0 || result.VerifiedBuyPrice <= 0 {
+						result.IsStillValid = false
+						result.Reason = "实时价格无效"
+						atomic.AddInt64(&invalidCount, 1)
+					} else if result.VerifiedSellPrice <= result.VerifiedBuyPrice {
+						result.IsStillValid = false
+						result.Reason = "售价不高于求购价"
+						atomic.AddInt64(&invalidCount, 1)
+					} else {
+						// 计算新利润率
+						feeRate := 0.01
+						netSellPrice := result.VerifiedSellPrice * (1 - feeRate)
+						estimatedProfit := netSellPrice - result.VerifiedBuyPrice
+						newProfitRate := estimatedProfit / result.VerifiedBuyPrice
+
+						if newProfitRate < *minProfitRate {
+							result.IsStillValid = false
+							result.Reason = fmt.Sprintf("利润率从 %.2f%% 下降到 %.2f%%，不满足最小 %.2f%%",
+								opp.ProfitRate*100, newProfitRate*100, *minProfitRate*100)
+							atomic.AddInt64(&invalidCount, 1)
+						} else {
+							result.IsStillValid = true
+							result.ProfitRateChange = newProfitRate - opp.ProfitRate
+							atomic.AddInt64(&validCount, 1)
+
+							// 若开启自动下单，则在验证通过后立即二次获取最高求购价、加价并下单
+							if *autoPurchase && ypClient != nil {
+								if item, ok := purchaseItemMap[opp.GoodID]; ok && item.Quantity > 0 {
+									// 第二次获取最新最高求购价（尽可能贴近下单时刻）
+									latestMax, _ := getLatestMaxBuyPrice(db, ypClient, opp.GoodID, timeoutSec)
+									// 如果获取失败或为0，则回退使用本次验证的买价
+									if latestMax <= 0 {
+										latestMax = result.VerifiedBuyPrice
+									}
+									bumped := bumpPurchasePrice(latestMax)
+									// 执行下单
+									if err := placeImmediatePurchaseOrder(db, ypClient, opp.GoodID, item.GoodName, item.Quantity, bumped, timeoutSec); err != nil {
+										log.Printf("[自动下单] [Worker-%d] %s 下单失败: %v", wid, opp.GoodName, err)
+									} else {
+										log.Printf("[自动下单] [Worker-%d] %s 已创建求购订单: 数量=%d, 价格=¥%.2f (最高=¥%.2f)", wid, opp.GoodName, item.Quantity, bumped, latestMax)
+									}
+								}
+							}
+						}
+					}
+				}
+
+				resultChan <- result
+				atomic.AddInt64(&processedCount, 1)
+
+				// 输出进度
+				processed := atomic.LoadInt64(&processedCount)
+				if processed%50 == 0 || processed == int64(len(opportunities)) {
+					log.Printf("[二次验证] 进度: %d/%d", processed, len(opportunities))
+				}
+			}
+		}(w)
+	}
+
+	// 分发任务
+	go func() {
+		for _, opp := range toVerify {
+			taskChan <- opp
+		}
+		close(taskChan)
+	}()
+
+	// 等待所有线程完成
+	wg.Wait()
+	close(resultChan)
+
+	// 收集结果
+	verificationResults := []VerificationResult{}
+	verifiedOpps := []models.ArbitrageOpportunity{}
+
+	resultMap := make(map[int64]VerificationResult)
+	for result := range resultChan {
+		resultMap[result.GoodID] = result
+		verificationResults = append(verificationResults, result)
+	}
+
+	// 构建验证通过的机会列表
+	for _, opp := range toVerify {
+		if result, ok := resultMap[opp.GoodID]; ok && result.IsStillValid {
+			opp.CurrentBuyPrice = result.VerifiedBuyPrice
+			opp.CurrentSellPrice = result.VerifiedSellPrice
+
+			// 重新计算利润率
+			feeRate := 0.01
+			netSellPrice := result.VerifiedSellPrice * (1 - feeRate)
+			estimatedProfit := netSellPrice - result.VerifiedBuyPrice
+			opp.ProfitRate = estimatedProfit / result.VerifiedBuyPrice
+
+			verifiedOpps = append(verifiedOpps, opp)
+		}
+	}
+
+	// 输出验证结果
+	log.Printf("[二次验证] ==================== 验证结果汇总 ====================")
+	log.Printf("[二次验证] 总计验证: %d 个", len(toVerify))
+	log.Printf("[二次验证] 验证通过: %d 个 ✅", atomic.LoadInt64(&validCount))
+	log.Printf("[二次验证] 验证失败: %d 个 ❌", atomic.LoadInt64(&invalidCount))
+
+	// 输出验证失败的机会
+	if atomic.LoadInt64(&invalidCount) > 0 {
+		log.Printf("[二次验证] ==================== 验证失败的机会 ====================")
+		for _, result := range verificationResults {
+			if !result.IsStillValid {
+				log.Printf("[❌] %s", result.GoodName)
+				log.Printf("     原价: 求购 ¥%.2f → 在售 ¥%.2f", result.OriginalBuyPrice, result.OriginalSellPrice)
+				log.Printf("     新价: 求购 ¥%.2f → 在售 ¥%.2f", result.VerifiedBuyPrice, result.VerifiedSellPrice)
+				log.Printf("     原因: %s", result.Reason)
+			}
+		}
+	}
+
+	// 输出验证通过但利润率变化的机会
+	var profitRateChanges []VerificationResult
+	for _, result := range verificationResults {
+		if result.IsStillValid && result.ProfitRateChange != 0 {
+			profitRateChanges = append(profitRateChanges, result)
+		}
+	}
+
+	if len(profitRateChanges) > 0 {
+		log.Printf("[二次验证] ==================== 利润率有变化的机会 ====================")
+		for _, result := range profitRateChanges {
+			changeIcon := "📈"
+			if result.ProfitRateChange < 0 {
+				changeIcon = "📉"
+			}
+			log.Printf("[%s] %s: 利润率变化 %+.2f%%", changeIcon, result.GoodName, result.ProfitRateChange*100)
+		}
+	}
+
+	log.Printf("[二次验证] ===================================================================")
+
+	return verifiedOpps
+}
+
+// GoodProcessingTask 单个商品处理任务
+type GoodProcessingTask struct {
+	goodID int64
+	good   models.CSQAQGood
+}
+
+// processGoodsInParallel 并发处理商品列表（第一阶段）
+func processGoodsInParallel(
+	db *gorm.DB,
+	ypClient *youpin.OpenAPIClient,
+	goodIDs []int64,
+	goodsCache map[int64]models.CSQAQGood,
+	numWorkers int,
+) []struct {
+	good                models.CSQAQGood
+	currentBuyPrice     float64
+	currentSellPrice    float64
+	avgBuyPrice7d       float64
+	avgSellPrice7d      float64
+	buyOrderCount       int
+	sellOrderCount      int
+	daysOfData          int
+	hasEnoughHistory    bool
+	rankNum             *int // 热度排名
+	historicalSnapshots []models.CSQAQGoodSnapshot
+} {
+	// 创建任务队列和结果队列
+	taskChan := make(chan GoodProcessingTask, len(goodIDs))
+	resultChan := make(chan struct {
+		good                models.CSQAQGood
+		currentBuyPrice     float64
+		currentSellPrice    float64
+		avgBuyPrice7d       float64
+		avgSellPrice7d      float64
+		buyOrderCount       int
+		sellOrderCount      int
+		daysOfData          int
+		hasEnoughHistory    bool
+		rankNum             *int // 热度排名
+		historicalSnapshots []models.CSQAQGoodSnapshot
+	})
+
+	// 启动工作线程
+	var wg sync.WaitGroup
+	for i := 0; i < numWorkers; i++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for task := range taskChan {
+				// 处理单个商品
+				processOneGood(db, ypClient, task, resultChan)
+			}
+		}(i)
+	}
+
+	// 发送任务
+	go func() {
+		for _, goodID := range goodIDs {
+			if good, exists := goodsCache[goodID]; exists {
+				taskChan <- GoodProcessingTask{
+					goodID: goodID,
+					good:   good,
+				}
+			}
+		}
+		close(taskChan)
+	}()
+
+	// 在后台等待所有工作线程完成
+	go func() {
+		wg.Wait()
+		close(resultChan)
+	}()
+
+	// 收集结果
+	var results []struct {
+		good                models.CSQAQGood
+		currentBuyPrice     float64
+		currentSellPrice    float64
+		avgBuyPrice7d       float64
+		avgSellPrice7d      float64
+		buyOrderCount       int
+		sellOrderCount      int
+		daysOfData          int
+		hasEnoughHistory    bool
+		rankNum             *int // 热度排名
+		historicalSnapshots []models.CSQAQGoodSnapshot
+	}
+
+	processedCount := 0
+	for result := range resultChan {
+		if result.currentBuyPrice > 0 && result.currentSellPrice > 0 {
+			results = append(results, result)
+		}
+		processedCount++
+		if processedCount%100 == 0 {
+			log.Printf("[并发处理] 已处理 %d 个商品，已筛选 %d 个候选项", processedCount, len(results))
+		}
+	}
+
+	return results
+}
+
+// processOneGood 处理单个商品
+func processOneGood(
+	db *gorm.DB,
+	ypClient *youpin.OpenAPIClient,
+	task GoodProcessingTask,
+	resultChan chan struct {
+		good                models.CSQAQGood
+		currentBuyPrice     float64
+		currentSellPrice    float64
+		avgBuyPrice7d       float64
+		avgSellPrice7d      float64
+		buyOrderCount       int
+		sellOrderCount      int
+		daysOfData          int
+		hasEnoughHistory    bool
+		rankNum             *int // 热度排名
+		historicalSnapshots []models.CSQAQGoodSnapshot
+	},
+) {
+	good := task.good
+	goodID := task.goodID
+
+	// 初始化结果结构体（0值）
+	result := struct {
+		good                models.CSQAQGood
+		currentBuyPrice     float64
+		currentSellPrice    float64
+		avgBuyPrice7d       float64
+		avgSellPrice7d      float64
+		buyOrderCount       int
+		sellOrderCount      int
+		daysOfData          int
+		hasEnoughHistory    bool
+		rankNum             *int // 热度排名
+		historicalSnapshots []models.CSQAQGoodSnapshot
+	}{
+		good: good,
+	}
+
+	// 类型过滤
+	name := good.Name
+	lowerName := strings.ToLower(name)
+
+	hasGuajian := strings.Contains(name, "挂件")
+	hasJinianpin := strings.Contains(name, "纪念品")
+
+	if strings.Contains(name, "★") ||
+		strings.Contains(name, "手套") ||
+		strings.Contains(name, "贴纸") ||
+		strings.Contains(name, "印花") ||
+		strings.Contains(name, "胶囊") ||
+		strings.Contains(name, "探员") ||
+		strings.Contains(name, "音乐盒") ||
+		strings.Contains(name, "钥匙") ||
+		strings.Contains(name, "通行证") ||
+		strings.Contains(name, "涂鸦") ||
+		strings.Contains(name, "收藏品") ||
+		strings.Contains(name, "武器箱") ||
+		strings.Contains(name, "布章") ||
+		strings.Contains(name, "特工") ||
+		strings.Contains(name, "徽章") ||
+		strings.Contains(name, "挂饰") ||
+		strings.Contains(name, "缀饰") ||
+		strings.Contains(name, "徽记") ||
+		strings.Contains(name, "补丁") ||
+		strings.Contains(name, "人偶") ||
+		strings.Contains(name, "人形") ||
+		strings.Contains(name, "代理人") ||
+		strings.Contains(name, "人质") ||
+		strings.Contains(name, "徽章包") ||
+		strings.Contains(name, "补章") ||
+		strings.Contains(name, "德拉戈米尔 | 军刀勇士") ||
+		strings.Contains(name, "纪念包") ||
+		strings.Contains(lowerName, "sticker") ||
+		strings.Contains(lowerName, "patch") ||
+		strings.Contains(lowerName, "agent") ||
+		strings.Contains(lowerName, "music kit") ||
+		strings.Contains(lowerName, "souvenir") ||
+		strings.Contains(lowerName, "case") ||
+		strings.Contains(lowerName, "capsule") ||
+		strings.Contains(lowerName, "graffiti") ||
+		strings.Contains(lowerName, "key") ||
+		strings.Contains(lowerName, "pass") ||
+		hasGuajian ||
+		hasJinianpin {
+		resultChan <- result
+		return
+	}
+
+	// 黑名单检查
+	if isBlacklisted(goodID, db) {
+		resultChan <- result
+		return
+	}
+
+	// 获取历史数据
+	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
+	var historicalSnapshots []models.CSQAQGoodSnapshot
+	if err := db.Where("good_id = ? AND created_at >= ?", goodID, sevenDaysAgo).
+		Order("created_at DESC").
+		Find(&historicalSnapshots).Error; err != nil || len(historicalSnapshots) == 0 {
+		resultChan <- result
+		return
+	}
+
+	// 获取实时价格
+	var currentBuyPrice, currentSellPrice float64
+	var rtBuyCount, rtSellCount int
+	var usedRealtime bool
+
+	if rp, _ := fetchRealtimePrice(db, ypClient, nil, goodID, good.Name, *ypTimeoutSec); rp.ok {
+		currentBuyPrice = rp.buy
+		currentSellPrice = rp.sell
+		rtBuyCount = rp.buyCount
+		rtSellCount = rp.sellCount
+		usedRealtime = true
+	} else {
+		// 回退快照
+		if len(historicalSnapshots) == 0 {
+			resultChan <- result
+			return
+		}
+		latestSnapshot := historicalSnapshots[0]
+		if latestSnapshot.YYYPBuyPrice == nil || latestSnapshot.YYYPSellPrice == nil ||
+			*latestSnapshot.YYYPBuyPrice <= 0 || *latestSnapshot.YYYPSellPrice <= 0 {
+			resultChan <- result
+			return
+		}
+		currentBuyPrice = *latestSnapshot.YYYPBuyPrice
+		currentSellPrice = *latestSnapshot.YYYPSellPrice
+	}
+
+	// 基础价格检查
+	if currentBuyPrice <= 0 || currentSellPrice <= 0 ||
+		currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice ||
+		currentBuyPrice < 0.5 || currentSellPrice < 0.5 ||
+		currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+		resultChan <- result
+		return
+	}
+
+	// 套利空间检查
+	feeRate := 0.01
+	netSellPrice := currentSellPrice * (1 - feeRate)
+	if netSellPrice <= currentBuyPrice {
+		resultChan <- result
+		return
+	}
+
+	// 获取订单数量
+	buyOrderCount := 0
+	sellOrderCount := 0
+
+	if usedRealtime {
+		buyOrderCount = rtBuyCount
+		sellOrderCount = rtSellCount
+	} else if len(historicalSnapshots) > 0 && historicalSnapshots[0].YYYPSellCount != nil && *historicalSnapshots[0].YYYPSellCount > 0 {
+		// 只关心真实的在售数量，如果没有就不推荐
+		sellOrderCount = *historicalSnapshots[0].YYYPSellCount
+		// 买单数量可选，没有就估算
+		if historicalSnapshots[0].YYYPBuyCount != nil && *historicalSnapshots[0].YYYPBuyCount > 0 {
+			buyOrderCount = *historicalSnapshots[0].YYYPBuyCount
+		} else {
+			buyOrderCount = int(float64(sellOrderCount) * 0.35) // 估算为在售数量的35%
+		}
+	} else {
+		// 没有真实的在售数量就不推荐
+		resultChan <- result
+		return
+	}
+
+	// 流动性检查
+	if sellOrderCount < *minSellCount || buyOrderCount < *minBuyCount {
+		resultChan <- result
+		return
+	}
+
+	// 计算平均价格
+	var avgBuyPrice7d, avgSellPrice7d float64
+	hasEnoughHistory := len(historicalSnapshots) >= *minDaysHistory
+
+	if hasEnoughHistory {
+		var totalBuyPrice, totalSellPrice float64
+		validBuyCount, validSellCount := 0, 0
+		for _, snapshot := range historicalSnapshots {
+			if snapshot.YYYPBuyPrice != nil && *snapshot.YYYPBuyPrice > 0 {
+				totalBuyPrice += *snapshot.YYYPBuyPrice
+				validBuyCount++
+			}
+			if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
+				totalSellPrice += *snapshot.YYYPSellPrice
+				validSellCount++
+			}
+		}
+
+		if validBuyCount > 0 && validSellCount > 0 {
+			avgBuyPrice7d = totalBuyPrice / float64(validBuyCount)
+			avgSellPrice7d = totalSellPrice / float64(validSellCount)
+		}
+	}
+
+	// 利润率检查
+	estimatedProfit := netSellPrice - currentBuyPrice
+	profitRate := estimatedProfit / currentBuyPrice
+
+	if profitRate < *minProfitRate {
+		resultChan <- result
+		return
+	}
+
+	// === 抄底策略检查（第一阶段）===
+	// 在第一阶段就识别底部反弹特征，避免遗漏抄底机会
+	// 条件：3-7天下跌 + 1-3天反弹 = 底部反弹信号
+	if len(historicalSnapshots) >= 2 {
+		now := time.Now()
+		var price1d, price2d, price3d, price7d, price30d float64
+		var has1d, has2d, has3d, has7d, has30d bool
+
+		// 从历史快照中获取对应时间点的价格
+		for _, snapshot := range historicalSnapshots {
+			if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
+				age := now.Sub(snapshot.CreatedAt)
+
+				// 1天前的价格（23-25小时）
+				if age >= 23*time.Hour && age <= 25*time.Hour && !has1d {
+					price1d = *snapshot.YYYPSellPrice
+					has1d = true
+				}
+
+				// 2天前的价格（47-49小时）
+				if age >= 47*time.Hour && age <= 49*time.Hour && !has2d {
+					price2d = *snapshot.YYYPSellPrice
+					has2d = true
+				}
+
+				// 3天前的价格（71-73小时）
+				if age >= 71*time.Hour && age <= 73*time.Hour && !has3d {
+					price3d = *snapshot.YYYPSellPrice
+					has3d = true
+				}
+
+				// 7天前的价格（6.5-7.5天）
+				if age >= 156*time.Hour && age <= 180*time.Hour && !has7d {
+					price7d = *snapshot.YYYPSellPrice
+					has7d = true
+				}
+
+				// 30天前的价格（28-32天）
+				if age >= 672*time.Hour && age <= 768*time.Hour && !has30d {
+					price30d = *snapshot.YYYPSellPrice
+					has30d = true
+				}
+			}
+		}
+
+		// 计算涨跌幅
+		var rate1d, rate2d, rate3d, rate7d, rate30d float64
+		_ = rate2d  // 可能未使用，但保留作为完整的多周期分析框架
+		_ = rate3d  // 可能未使用
+		_ = rate30d // 30天涨跌幅在当前版本未使用，但保留框架
+		if has1d && price1d > 0 {
+			rate1d = (currentSellPrice - price1d) / price1d
+		}
+		if has2d && price2d > 0 {
+			rate2d = (currentSellPrice - price2d) / price2d
+		}
+		if has3d && price3d > 0 {
+			rate3d = (currentSellPrice - price3d) / price3d
+		}
+		if has7d && price7d > 0 {
+			rate7d = (currentSellPrice - price7d) / price7d
+		}
+		if has30d && price30d > 0 {
+			rate30d = (currentSellPrice - price30d) / price30d
+		}
+
+		// 抄底策略判断：支持3-7天灵活周期
+		isBottomRebound := false
+
+		// 情况1：连续上涨中（1天↑ AND 7天↑）- 避免高位接盘，不符合抄底
+		if has1d && has7d && rate1d > 0 && rate7d > 0 {
+			isBottomRebound = false
+		} else if has1d && has7d && has30d && rate1d < 0 && rate7d < 0 && rate30d < 0 {
+			// 情况2：所有周期都在下跌 - 避免继续下跌
+			isBottomRebound = false
+		} else {
+			// 情况3：底部反弹 - 支持3-7天的灵活周期
+
+			// 灵活周期检查：3天、4天、5天、6天、7天中的任何一个满足下跌条件
+			hasValidDecline := false
+			var declineDays int
+			var declineRate float64
+			_ = declineDays
+
+			// 检查7天下跌
+			if has7d && rate7d < -0.05 {
+				hasValidDecline = true
+				declineDays = 7
+				declineRate = rate7d
+			}
+			// 检查6-7天下跌 - 稍微放宽一点
+			if !hasValidDecline && has7d && rate7d < -0.04 {
+				hasValidDecline = true
+				declineDays = 7
+				declineRate = rate7d
+			}
+			// 检查5天下跌 - 从3天数据推断
+			if !hasValidDecline && has3d && rate3d < -0.04 {
+				hasValidDecline = true
+				declineDays = 5
+				declineRate = rate3d * 1.5
+			}
+			// 检查4天下跌
+			if !hasValidDecline && has2d && rate2d < -0.03 {
+				hasValidDecline = true
+				declineDays = 4
+				declineRate = rate2d
+			}
+			// 检查3天下跌 - 需要最强的下跌
+			if !hasValidDecline && has1d && rate1d < -0.05 {
+				hasValidDecline = true
+				declineDays = 3
+				declineRate = rate1d
+			}
+
+			if hasValidDecline {
+				// 找最近的反弹点（1天、2天或3天内）
+				var latestRebound float64
+				var hasRebound bool
+
+				if has1d && rate1d > 0 {
+					latestRebound = rate1d
+					hasRebound = true
+				} else if has2d && rate2d > 0 {
+					latestRebound = rate2d
+					hasRebound = true
+				} else if has3d && rate3d > 0 {
+					latestRebound = rate3d
+					hasRebound = true
+				}
+
+				// 有反弹且在3天内
+				if hasRebound && latestRebound > 0 {
+					// 计算反弹恢复率：反弹幅度 / 跌幅
+					recoveryRate := latestRebound / (-declineRate)
+
+					// ⭐ 改进：反弹判断逻辑（追稳而非追涨）=====
+					// 确保选中的是"底部稳定反弹"而非"高位追涨"
+
+					// 反弹恢复率范围：必须在minRebound% ~ maxRebound%之间
+					// - 最低：必须恢复至少50%的跌幅（原来30%太低）
+					// - 最高：不超过跌幅的80%（防止追涨过度）
+					minRecoveryRate := *minRebound        // 从0.30提升至0.50
+					maxRecoveryRate := *maxRebound        // 新增：最高0.80
+					minAbsoluteReb := *minAbsoluteRebound // 从0.02提升至0.03
+
+					// 检查反弹是否在合理范围内
+					recoveryRateOK := recoveryRate >= minRecoveryRate && recoveryRate <= maxRecoveryRate
+					absoluteReOK := latestRebound >= minAbsoluteReb && latestRebound <= *maxAbsoluteRebound1d
+
+					// 单日反弹不能超过5%
+					if has1d && latestRebound == rate1d && rate1d > *maxAbsoluteRebound1d {
+						// 1天反弹超过5%，标记为风险较高但仍保留
+					}
+
+					if recoveryRateOK || absoluteReOK {
+						// 反弹在合理范围内，这是底部反弹信号！✅
+						isBottomRebound = true
+					}
+				}
+			}
+		}
+		// 其他情况：既不是连续上涨，也不是底部反弹，按普通情况处理
+		_ = isBottomRebound // 标记使用，为第二阶段预留
+	}
+
+	// 构建并返回结果
+	result.currentBuyPrice = currentBuyPrice
+	result.currentSellPrice = currentSellPrice
+	result.avgBuyPrice7d = avgBuyPrice7d
+	result.avgSellPrice7d = avgSellPrice7d
+	result.buyOrderCount = buyOrderCount
+	result.sellOrderCount = sellOrderCount
+	result.daysOfData = len(historicalSnapshots)
+	result.hasEnoughHistory = hasEnoughHistory
+	result.historicalSnapshots = historicalSnapshots
+
+	// 获取热度排名：从最新的快照中读取
+	if len(historicalSnapshots) > 0 && historicalSnapshots[0].RankNum != nil {
+		result.rankNum = historicalSnapshots[0].RankNum
+	}
+
+	resultChan <- result
 }
 
 func main() {
@@ -894,11 +1824,29 @@ func main() {
 	log.Printf("  - 最高合理价格: ¥%.2f", *maxReasonablePrice)
 	log.Printf("  - 最大价差倍数: %.1f倍", *maxPriceSpread)
 	log.Printf("  - 最少历史天数: %d天", *minDaysHistory)
+	log.Printf("  - 并发线程数: %d", *concurrency)
+	// ===== 新增：反弹参数说明 =====
+	log.Printf("[反弹控制] 追稳策略参数:")
+	log.Printf("  - 反弹恢复率下限: %.0f%%（必须恢复至少%.0f%%的跌幅）", *minRebound*100, *minRebound*100)
+	log.Printf("  - 反弹恢复率上限: %.0f%%（防止追涨，不超过%.0f%%的跌幅）", *maxRebound*100, *maxRebound*100)
+	log.Printf("  - 绝对反弹下限: %.2f%%（最少要反弹%.2f%%）", *minAbsoluteRebound*100, *minAbsoluteRebound*100)
+	log.Printf("  - 单日反弹上限: %.2f%%（一天反弹不超过%.2f%%）", *maxAbsoluteRebound1d*100, *maxAbsoluteRebound1d*100)
+	if *onlyBottomRebound {
+		log.Printf("[抄底模式] 🟢 仅抄底模式已激活: 只保留 \"7天跌幅≥5%% + 1-3天内反弹\" 的饰品")
+	} else {
+		log.Printf("  - 📊 模式: 全量分析模式")
+	}
 
 	// 初始化数据库
 	db, err := database.Initialize(*dbURL)
 	if err != nil {
 		log.Fatalf("[套利分析器] 数据库初始化失败: %v", err)
+	}
+
+	// 加载黑名单
+	blacklistPath := "/root/goods_black_note.xlsx"
+	if _, err := loadBlacklist(blacklistPath); err != nil {
+		log.Printf("[黑名单] ⚠️ 加载黑名单失败: %v", err)
 	}
 
 	// 自动迁移：套利机会、历史归档、求购计划与明细表
@@ -932,18 +1880,46 @@ func runAnalysis(db *gorm.DB) {
 	log.Printf("[套利分析] ==================== 开始新一轮分析 ====================")
 	log.Printf("[套利分析] 分析时间: %s", analysisTime.Format("2006-01-02 15:04:05"))
 
-	// 预备：尝试构建YouPin实时客户端（用于在无7天内快照时实时获取价差）
-	var ypClient *youpin.Client
+	// === 市场风险检测（自适应策略） ===
+	marketRisk := DetectMarketRisk(db)
+	log.Printf("[市场风险检测] %s", marketRisk.Recommendation)
+	log.Printf("  - 历史成功率: %.1f%%", marketRisk.SuccessRate*100)
+	log.Printf("  - 平均ROI: %.2f%%", marketRisk.AvgROI*100)
+
+	// 应用自适应策略调整
+	ApplyAdaptiveAdjustment(marketRisk)
+
+	// 预备：尝试构建YouPin OpenAPI客户端
+	var ypClient *youpin.OpenAPIClient
 	{
+		// 首先尝试获取一个有效的Token用于求购查询
+		var accountToken string
 		var account models.YouPinAccount
 		if err := db.Where("is_active = ?", true).First(&account).Error; err == nil && account.Token != "" {
-			if c, err := youpin.NewClient(account.Token); err == nil {
+			accountToken = account.Token
+		}
+
+		// 如果有Token，使用带Token的OpenAPI客户端；否则只使用OpenAPI认证（求购查询会失败，但可进行价格验证）
+		if accountToken != "" {
+			if c, err := youpin.NewOpenAPIClientWithDefaultKeysAndToken(accountToken); err == nil {
 				ypClient = c
+				log.Printf("[套利分析] YouPin OpenAPI客户端初始化成功（OpenAPI + Token双认证）")
 			} else {
-				log.Printf("[套利分析] YouPin客户端初始化失败（实时价兜底不可用）: %v", err)
+				log.Printf("[套利分析] Token客户端初始化失败: %v，尝试仅使用OpenAPI", err)
+				if c, err := youpin.NewOpenAPIClientWithDefaultKeys(); err == nil {
+					ypClient = c
+					log.Printf("[套利分析] YouPin OpenAPI客户端初始化成功（仅OpenAPI认证，求购查询不可用）")
+				} else {
+					log.Printf("[套利分析] YouPin OpenAPI客户端初始化失败: %v", err)
+				}
 			}
 		} else {
-			log.Printf("[套利分析] 未找到激活的悠悠有品账户（实时价兜底不可用）")
+			if c, err := youpin.NewOpenAPIClientWithDefaultKeys(); err == nil {
+				ypClient = c
+				log.Printf("[套利分析] YouPin OpenAPI客户端初始化成功（仅OpenAPI认证，求购查询不可用）")
+			} else {
+				log.Printf("[套利分析] YouPin OpenAPI客户端初始化失败: %v", err)
+			}
 		}
 	}
 
@@ -975,8 +1951,10 @@ func runAnalysis(db *gorm.DB) {
 
 	// 顺序模式：不预抓取，直接在第一阶段内按商品顺序获取实时价
 
-	// 第一阶段：收集所有符合条件的商品数据（顺序）
-	log.Printf("[套利分析] ==================== 第一阶段：筛选符合条件的商品（顺序） ====================")
+	// 第一阶段：收集所有符合条件的商品数据（并发）
+	log.Printf("[套利分析] ==================== 第一阶段：筛选符合条件的商品（并发 %d 线程） ====================", *concurrency)
+
+	phaseStartTime := time.Now()
 	var candidateItems []struct {
 		good                models.CSQAQGood
 		currentBuyPrice     float64
@@ -987,13 +1965,21 @@ func runAnalysis(db *gorm.DB) {
 		sellOrderCount      int
 		daysOfData          int
 		hasEnoughHistory    bool
+		rankNum             *int // 热度排名
 		historicalSnapshots []models.CSQAQGoodSnapshot
 	}
 
-	processedCount := 0
-	skippedCount := 0
+	// 使用并发处理
+	candidateItems = processGoodsInParallel(db, ypClient, goodIDs, goodsCache, *concurrency)
 
-	// 统计各种跳过原因
+	log.Printf("[套利分析] 第一阶段耗时: %.2f 秒，筛选完成! 候选项: %d 个",
+		time.Since(phaseStartTime).Seconds(), len(candidateItems))
+
+	// 以下代码为了兼容性保留，但不再使用原循环
+	processedCount := len(goodIDs)
+	skippedCount := len(goodIDs) - len(candidateItems)
+
+	// 统计各种跳过原因（由于并发处理，这里无法精确统计各类原因，但可以给出总体统计）
 	skipReasons := map[string]int{
 		"类型过滤":  0,
 		"无历史数据": 0,
@@ -1004,285 +1990,280 @@ func runAnalysis(db *gorm.DB) {
 		"无套利空间": 0,
 		"流动性不足": 0,
 	}
-	realDataCount := 0
+	realDataCount := len(candidateItems)
 	estimatedDataCount := 0
 
-	for i, goodID := range goodIDs {
-		time.Sleep(time.Millisecond * 100)
-		// 每处理100个商品输出一次进度
-		if i%100 == 0 && i > 0 {
-			log.Printf("[第一阶段] 进度: %d/%d (%.1f%%), 已筛选 %d 个候选项, 跳过 %d 个",
-				i, len(goodIDs), float64(i)/float64(len(goodIDs))*100, len(candidateItems), skippedCount)
-		}
-		processedCount++
+	// 以下原有的 for 循环已被并发处理替代
+	if false { // 保留代码结构用于参考
+		for i, goodID := range goodIDs {
+			time.Sleep(time.Millisecond * 100)
+			// 每处理100个商品输出一次进度
+			if i%100 == 0 && i > 0 {
+				log.Printf("[第一阶段] 进度: %d/%d (%.1f%%), 已筛选 %d 个候选项, 跳过 %d 个",
+					i, len(goodIDs), float64(i)/float64(len(goodIDs))*100, len(candidateItems), skippedCount)
+			}
+			processedCount++
 
-		// 从缓存中获取商品信息
-		good, exists := goodsCache[goodID]
-		if !exists {
-			skippedCount++
-			continue
-		}
+			// 从缓存中获取商品信息
+			good, exists := goodsCache[goodID]
+			if !exists {
+				skippedCount++
+				continue
+			}
 
-		// 过滤掉非枪械饰品（刀、手套、贴纸/布章、角色/探员/特工、印花、挂件、纪念品、胶囊、音乐盒、钥匙、通行证、涂鸦等）
-		name := good.Name
-		lowerName := strings.ToLower(name)
+			// 过滤掉非枪械饰品（刀、手套、贴纸/布章、角色/探员/特工、印花、挂件、纪念品、胶囊、音乐盒、钥匙、通行证、涂鸦等）
+			name := good.Name
+			lowerName := strings.ToLower(name)
 
-		// 检测是否包含"挂件"或"纪念品"
-		hasGuajian := strings.Contains(name, "挂件")
-		hasJinianpin := strings.Contains(name, "纪念品")
+			// 检测是否包含"挂件"或"纪念品"
+			hasGuajian := strings.Contains(name, "挂件")
+			hasJinianpin := strings.Contains(name, "纪念品")
 
-		if strings.Contains(name, "★") || // 刀具（带星标）
-			strings.Contains(name, "手套") ||
-			strings.Contains(name, "贴纸") ||
-			strings.Contains(name, "印花") ||
-			strings.Contains(name, "胶囊") ||
-			strings.Contains(name, "探员") ||
-			strings.Contains(name, "音乐盒") ||
-			strings.Contains(name, "钥匙") ||
-			strings.Contains(name, "通行证") ||
-			strings.Contains(name, "涂鸦") ||
-			strings.Contains(name, "收藏品") ||
-			strings.Contains(name, "武器箱") ||
-			// 额外英文/别名过滤
-			strings.Contains(name, "布章") ||
-			strings.Contains(name, "特工") ||
-			strings.Contains(name, "徽章") ||
-			strings.Contains(name, "挂饰") ||
-			strings.Contains(name, "缀饰") ||
-			strings.Contains(name, "徽记") ||
-			strings.Contains(name, "补丁") ||
-			strings.Contains(name, "人偶") ||
-			strings.Contains(name, "人形") ||
-			strings.Contains(name, "代理人") ||
-			strings.Contains(name, "人质") ||
-			strings.Contains(name, "徽章包") ||
-			strings.Contains(name, "补章") ||
-			strings.Contains(name, "德拉戈米尔 | 军刀勇士") ||
-			strings.Contains(name, "纪念包") ||
-			// 英文小写匹配
-			strings.Contains(lowerName, "sticker") ||
-			strings.Contains(lowerName, "patch") ||
-			strings.Contains(lowerName, "agent") ||
-			strings.Contains(lowerName, "music kit") ||
-			strings.Contains(lowerName, "souvenir") ||
-			strings.Contains(lowerName, "case") ||
-			strings.Contains(lowerName, "capsule") ||
-			strings.Contains(lowerName, "graffiti") ||
-			strings.Contains(lowerName, "key") ||
-			strings.Contains(lowerName, "pass") ||
-			hasGuajian ||
-			hasJinianpin {
-			skippedCount++
-			skipReasons["类型过滤"]++
-			continue
-		}
+			if strings.Contains(name, "★") || // 刀具（带星标）
+				strings.Contains(name, "手套") ||
+				strings.Contains(name, "贴纸") ||
+				strings.Contains(name, "印花") ||
+				strings.Contains(name, "胶囊") ||
+				strings.Contains(name, "探员") ||
+				strings.Contains(name, "音乐盒") ||
+				strings.Contains(name, "钥匙") ||
+				strings.Contains(name, "通行证") ||
+				strings.Contains(name, "涂鸦") ||
+				strings.Contains(name, "收藏品") ||
+				strings.Contains(name, "武器箱") ||
+				// 额外英文/别名过滤
+				strings.Contains(name, "布章") ||
+				strings.Contains(name, "特工") ||
+				strings.Contains(name, "徽章") ||
+				strings.Contains(name, "挂饰") ||
+				strings.Contains(name, "缀饰") ||
+				strings.Contains(name, "徽记") ||
+				strings.Contains(name, "补丁") ||
+				strings.Contains(name, "人偶") ||
+				strings.Contains(name, "人形") ||
+				strings.Contains(name, "代理人") ||
+				strings.Contains(name, "人质") ||
+				strings.Contains(name, "徽章包") ||
+				strings.Contains(name, "补章") ||
+				strings.Contains(name, "德拉戈米尔 | 军刀勇士") ||
+				strings.Contains(name, "纪念包") ||
+				// 英文小写匹配
+				strings.Contains(lowerName, "sticker") ||
+				strings.Contains(lowerName, "patch") ||
+				strings.Contains(lowerName, "agent") ||
+				strings.Contains(lowerName, "music kit") ||
+				strings.Contains(lowerName, "souvenir") ||
+				strings.Contains(lowerName, "case") ||
+				strings.Contains(lowerName, "capsule") ||
+				strings.Contains(lowerName, "graffiti") ||
+				strings.Contains(lowerName, "key") ||
+				strings.Contains(lowerName, "pass") ||
+				hasGuajian ||
+				hasJinianpin {
+				skippedCount++
+				skipReasons["类型过滤"]++
+				continue
+			}
 
-		// 一次性获取7天内的所有历史快照（包含最新的）
-		sevenDaysAgo := time.Now().AddDate(0, 0, -7)
-		var historicalSnapshots []models.CSQAQGoodSnapshot
-		if err := db.Where("good_id = ? AND created_at >= ?", goodID, sevenDaysAgo).
-			Order("created_at DESC").
-			Find(&historicalSnapshots).Error; err != nil {
-			skippedCount++
-			skipReasons["无历史数据"]++
-			continue
-		}
-		// 计算当前价：优先使用YouPin实时价，失败再回退快照
-		var currentBuyPrice, currentSellPrice float64
-		var rtBuyCount, rtSellCount int
-		var usedRealtime bool
-		// 顺序获取实时价
-		if rp, reason := fetchRealtimePrice(db, ypClient, nil, goodID, good.Name, *ypTimeoutSec); rp.ok {
-			currentBuyPrice = rp.buy
-			currentSellPrice = rp.sell
-			rtBuyCount = rp.buyCount
-			rtSellCount = rp.sellCount
-			usedRealtime = true
-		} else {
-			// 回退快照
-			if len(historicalSnapshots) == 0 {
+			// 一次性获取7天内的所有历史快照（包含最新的）
+			sevenDaysAgo := time.Now().AddDate(0, 0, -7)
+			var historicalSnapshots []models.CSQAQGoodSnapshot
+			if err := db.Where("good_id = ? AND created_at >= ?", goodID, sevenDaysAgo).
+				Order("created_at DESC").
+				Find(&historicalSnapshots).Error; err != nil {
 				skippedCount++
 				skipReasons["无历史数据"]++
-				log.Printf("[套利分析][RT失败] good_id=%d name=%s reason=%s", goodID, good.Name, reason)
 				continue
 			}
-			latestSnapshot := historicalSnapshots[0]
-			if latestSnapshot.YYYPBuyPrice == nil || latestSnapshot.YYYPSellPrice == nil ||
-				*latestSnapshot.YYYPBuyPrice <= 0 || *latestSnapshot.YYYPSellPrice <= 0 {
+			// 计算当前价：优先使用YouPin实时价，失败再回退快照
+			var currentBuyPrice, currentSellPrice float64
+			var rtBuyCount, rtSellCount int
+			var usedRealtime bool
+			// 顺序获取实时价
+			if rp, reason := fetchRealtimePrice(db, ypClient, nil, goodID, good.Name, *ypTimeoutSec); rp.ok {
+				currentBuyPrice = rp.buy
+				currentSellPrice = rp.sell
+				rtBuyCount = rp.buyCount
+				rtSellCount = rp.sellCount
+				usedRealtime = true
+			} else {
+				// 回退快照
+				if len(historicalSnapshots) == 0 {
+					skippedCount++
+					skipReasons["无历史数据"]++
+					log.Printf("[套利分析][RT失败] good_id=%d name=%s reason=%s", goodID, good.Name, reason)
+					continue
+				}
+				latestSnapshot := historicalSnapshots[0]
+				if latestSnapshot.YYYPBuyPrice == nil || latestSnapshot.YYYPSellPrice == nil ||
+					*latestSnapshot.YYYPBuyPrice <= 0 || *latestSnapshot.YYYPSellPrice <= 0 {
+					skippedCount++
+					skipReasons["价格无效"]++
+					log.Printf("[套利分析][RT失败] good_id=%d name=%s reason=%s (fallback invalid)", goodID, good.Name, reason)
+					continue
+				}
+				currentBuyPrice = *latestSnapshot.YYYPBuyPrice
+				currentSellPrice = *latestSnapshot.YYYPSellPrice
+			}
+
+			// 已在上方声明 rtBuyCount/rtSellCount 统计实时数量
+
+			// === 第一步：基础价格有效性检查 ===
+			if currentBuyPrice <= 0 || currentSellPrice <= 0 {
 				skippedCount++
 				skipReasons["价格无效"]++
-				log.Printf("[套利分析][RT失败] good_id=%d name=%s reason=%s (fallback invalid)", goodID, good.Name, reason)
 				continue
 			}
-			currentBuyPrice = *latestSnapshot.YYYPBuyPrice
-			currentSellPrice = *latestSnapshot.YYYPSellPrice
-		}
 
-		// 已在上方声明 rtBuyCount/rtSellCount 统计实时数量
-
-		// === 第一步：基础价格有效性检查 ===
-		if currentBuyPrice <= 0 || currentSellPrice <= 0 {
-			skippedCount++
-			skipReasons["价格无效"]++
-			continue
-		}
-
-		// === 第二步：价格上限检查（过滤天价商品）===
-		if currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice {
-			skippedCount++
-			skipReasons["价格过高"]++
-			continue
-		}
-
-		// === 第三步：价格合理性检查（售价不应该远高于求购价）===
-		// 正常情况下售价应该略高于求购价，如果售价是求购价的2倍以上，说明数据异常
-		if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
-			skippedCount++
-			skipReasons["价差异常"]++
-			continue
-		}
-
-		// === 第四步：价格下限检查（过滤过于便宜的商品，可能是垃圾）===
-		if currentBuyPrice < 0.5 || currentSellPrice < 0.5 {
-			skippedCount++
-			skipReasons["价格过低"]++
-			continue
-		}
-
-		// === 第五步：基本套利空间检查（必须有利润空间）===
-		// 扣除1%手续费后，售价必须高于求购价
-		var feeRate float64 = 0.01
-		var netSellPrice float64 = currentSellPrice * (1 - feeRate)
-		if netSellPrice <= currentBuyPrice {
-			skippedCount++
-			skipReasons["无套利空间"]++
-			continue
-		}
-
-		// 获取求购和在售订单数量（优先使用实时数量；否则从快照读取；再否则估算）
-		buyOrderCount := 0  // 求购数量
-		sellOrderCount := 0 // 在售数量
-		usingRealData := false
-
-		if usedRealtime {
-			buyOrderCount = rtBuyCount
-			sellOrderCount = rtSellCount
-			usingRealData = true
-		} else if len(historicalSnapshots) > 0 && historicalSnapshots[0].YYYPBuyCount != nil && historicalSnapshots[0].YYYPSellCount != nil {
-			buyOrderCount = *historicalSnapshots[0].YYYPBuyCount
-			sellOrderCount = *historicalSnapshots[0].YYYPSellCount
-			usingRealData = true
-		} else {
-			// 如果快照中没有数量数据，使用估算值（兼容旧数据）
-			// 根据价格估算热度（价格低通常热度高，但要避免垃圾货）
-			if currentBuyPrice >= 1 && currentBuyPrice < 50 {
-				buyOrderCount = 80
-				sellOrderCount = 120
-			} else if currentBuyPrice >= 50 && currentBuyPrice < 200 {
-				buyOrderCount = 50
-				sellOrderCount = 100
-			} else if currentBuyPrice >= 200 && currentBuyPrice < 500 {
-				buyOrderCount = 30
-				sellOrderCount = 80
-			} else if currentBuyPrice >= 500 {
-				buyOrderCount = 15
-				sellOrderCount = 60
+			// === 第二步：价格上限检查（过滤天价商品）===
+			if currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice {
+				skippedCount++
+				skipReasons["价格过高"]++
+				continue
 			}
-		}
 
-		// 跟踪数据来源
-		if usingRealData {
-			realDataCount++
-		} else {
-			estimatedDataCount++
-		}
+			// === 第三步：价格合理性检查（售价不应该远高于求购价）===
+			// 正常情况下售价应该略高于求购价，如果售价是求购价的2倍以上，说明数据异常
+			if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+				skippedCount++
+				skipReasons["价差异常"]++
+				continue
+			}
 
-		// === 第六步：流动性检查（在售数量和求购数量）===
-		if sellOrderCount < *minSellCount {
-			skippedCount++
-			skipReasons["流动性不足"]++
-			continue
-		}
-		if buyOrderCount < *minBuyCount {
-			skippedCount++
-			skipReasons["流动性不足"]++
-			continue
-		}
+			// === 第四步：价格下限检查（过滤过于便宜的商品，可能是垃圾）===
+			if currentBuyPrice < 0.5 || currentSellPrice < 0.5 {
+				skippedCount++
+				skipReasons["价格过低"]++
+				continue
+			}
 
-		// 计算平均价格（如果历史数据足够）
-		var avgBuyPrice7d, avgSellPrice7d float64
-		hasEnoughHistory := len(historicalSnapshots) >= *minDaysHistory
+			// === 第五步：基本套利空间检查（必须有利润空间）===
+			// 扣除1%手续费后，售价必须高于求购价
+			var feeRate float64 = 0.01
+			var netSellPrice float64 = currentSellPrice * (1 - feeRate)
+			if netSellPrice <= currentBuyPrice {
+				skippedCount++
+				skipReasons["无套利空间"]++
+				continue
+			}
 
-		if hasEnoughHistory {
-			var totalBuyPrice, totalSellPrice float64
-			validBuyCount, validSellCount := 0, 0
-			for _, snapshot := range historicalSnapshots {
-				if snapshot.YYYPBuyPrice != nil && *snapshot.YYYPBuyPrice > 0 {
-					totalBuyPrice += *snapshot.YYYPBuyPrice
-					validBuyCount++
+			// 获取求购和在售订单数量（优先使用实时数量；否则从快照读取；再否则估算）
+			buyOrderCount := 0  // 求购数量
+			sellOrderCount := 0 // 在售数量
+			usingRealData := false
+
+			if usedRealtime {
+				buyOrderCount = rtBuyCount
+				sellOrderCount = rtSellCount
+				usingRealData = true
+			} else if len(historicalSnapshots) > 0 && historicalSnapshots[0].YYYPSellCount != nil && *historicalSnapshots[0].YYYPSellCount > 0 {
+				// 只关心真实的在售数量，如果没有就跳过
+				sellOrderCount = *historicalSnapshots[0].YYYPSellCount
+				// 买单数量可选，没有就估算为在售的35%
+				if historicalSnapshots[0].YYYPBuyCount != nil && *historicalSnapshots[0].YYYPBuyCount > 0 {
+					buyOrderCount = *historicalSnapshots[0].YYYPBuyCount
+				} else {
+					buyOrderCount = int(float64(sellOrderCount) * 0.35)
 				}
-				if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
-					totalSellPrice += *snapshot.YYYPSellPrice
-					validSellCount++
+				usingRealData = true
+			} else {
+				// 没有真实的在售数量就跳过，不用估算值
+				skippedCount++
+				skipReasons["无流动性数据"]++
+				continue
+			}
+
+			// 跟踪数据来源
+			if usingRealData {
+				realDataCount++
+			}
+			if usingRealData {
+				realDataCount++
+			} else {
+				estimatedDataCount++
+			}
+
+			// === 第六步：流动性检查（在售数量和求购数量）===
+			if sellOrderCount < *minSellCount {
+				skippedCount++
+				skipReasons["流动性不足"]++
+				continue
+			}
+			if buyOrderCount < *minBuyCount {
+				skippedCount++
+				skipReasons["流动性不足"]++
+				continue
+			}
+
+			// 计算平均价格（如果历史数据足够）
+			var avgBuyPrice7d, avgSellPrice7d float64
+			hasEnoughHistory := len(historicalSnapshots) >= *minDaysHistory
+
+			if hasEnoughHistory {
+				var totalBuyPrice, totalSellPrice float64
+				validBuyCount, validSellCount := 0, 0
+				for _, snapshot := range historicalSnapshots {
+					if snapshot.YYYPBuyPrice != nil && *snapshot.YYYPBuyPrice > 0 {
+						totalBuyPrice += *snapshot.YYYPBuyPrice
+						validBuyCount++
+					}
+					if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
+						totalSellPrice += *snapshot.YYYPSellPrice
+						validSellCount++
+					}
+				}
+
+				if validBuyCount > 0 && validSellCount > 0 {
+					avgBuyPrice7d = totalBuyPrice / float64(validBuyCount)
+					avgSellPrice7d = totalSellPrice / float64(validSellCount)
 				}
 			}
 
-			if validBuyCount > 0 && validSellCount > 0 {
-				avgBuyPrice7d = totalBuyPrice / float64(validBuyCount)
-				avgSellPrice7d = totalSellPrice / float64(validSellCount)
+			// 计算利润率（考虑交易费用，假设1%手续费）
+			feeRate = 0.01 // 1%手续费
+			netSellPrice = currentSellPrice * (1 - feeRate)
+			estimatedProfit := netSellPrice - currentBuyPrice
+			profitRate := estimatedProfit / currentBuyPrice
+
+			// 只记录有基本利润的商品（阈值可以放宽，留到后面筛选）
+			if profitRate < *minProfitRate {
+				skippedCount++
+				continue
 			}
+
+			// 将符合基本条件的商品添加到候选列表
+			candidateItems = append(candidateItems, struct {
+				good                models.CSQAQGood
+				currentBuyPrice     float64
+				currentSellPrice    float64
+				avgBuyPrice7d       float64
+				avgSellPrice7d      float64
+				buyOrderCount       int
+				sellOrderCount      int
+				daysOfData          int
+				hasEnoughHistory    bool
+				rankNum             *int // 热度排名
+				historicalSnapshots []models.CSQAQGoodSnapshot
+			}{
+				good:                good,
+				currentBuyPrice:     currentBuyPrice,
+				currentSellPrice:    currentSellPrice,
+				avgBuyPrice7d:       avgBuyPrice7d,
+				avgSellPrice7d:      avgSellPrice7d,
+				buyOrderCount:       buyOrderCount,
+				sellOrderCount:      sellOrderCount,
+				daysOfData:          len(historicalSnapshots),
+				hasEnoughHistory:    hasEnoughHistory,
+				rankNum:             nil,
+				historicalSnapshots: historicalSnapshots,
+			})
 		}
+	} // 关闭 if false 条件块
 
-		// 计算利润率（考虑交易费用，假设1%手续费）
-		feeRate = 0.01 // 1%手续费
-		netSellPrice = currentSellPrice * (1 - feeRate)
-		estimatedProfit := netSellPrice - currentBuyPrice
-		profitRate := estimatedProfit / currentBuyPrice
-
-		// 只记录有基本利润的商品（阈值可以放宽，留到后面筛选）
-		if profitRate < *minProfitRate {
-			skippedCount++
-			continue
-		}
-
-		// 将符合基本条件的商品添加到候选列表
-		candidateItems = append(candidateItems, struct {
-			good                models.CSQAQGood
-			currentBuyPrice     float64
-			currentSellPrice    float64
-			avgBuyPrice7d       float64
-			avgSellPrice7d      float64
-			buyOrderCount       int
-			sellOrderCount      int
-			daysOfData          int
-			hasEnoughHistory    bool
-			historicalSnapshots []models.CSQAQGoodSnapshot
-		}{
-			good:                good,
-			currentBuyPrice:     currentBuyPrice,
-			currentSellPrice:    currentSellPrice,
-			avgBuyPrice7d:       avgBuyPrice7d,
-			avgSellPrice7d:      avgSellPrice7d,
-			buyOrderCount:       buyOrderCount,
-			sellOrderCount:      sellOrderCount,
-			daysOfData:          len(historicalSnapshots),
-			hasEnoughHistory:    hasEnoughHistory,
-			historicalSnapshots: historicalSnapshots,
-		})
-	}
-
+	// 输出统计信息
 	log.Printf("[第一阶段] 筛选完成! 总计处理: %d, 候选项: %d, 跳过: %d",
 		processedCount, len(candidateItems), skippedCount)
 	log.Printf("[第一阶段] 数据来源: 真实数据 %d 个, 估算数据 %d 个", realDataCount, estimatedDataCount)
-	log.Printf("[第一阶段] 跳过原因统计:")
-	log.Printf("  - 类型过滤: %d", skipReasons["类型过滤"])
-	log.Printf("  - 无历史数据: %d", skipReasons["无历史数据"])
-	log.Printf("  - 价格无效: %d", skipReasons["价格无效"])
-	log.Printf("  - 价格过高: %d", skipReasons["价格过高"])
-	log.Printf("  - 价差异常: %d", skipReasons["价差异常"])
-	log.Printf("  - 价格过低: %d", skipReasons["价格过低"])
-	log.Printf("  - 无套利空间: %d", skipReasons["无套利空间"])
-	log.Printf("  - 流动性不足: %d", skipReasons["流动性不足"])
 
 	// 第二阶段：对所有候选商品进行详细分析和评分
 	log.Printf("[套利分析] ==================== 第二阶段：计算套利机会和风险评估 ====================")
@@ -1291,6 +2272,10 @@ func runAnalysis(db *gorm.DB) {
 	// 第二阶段过滤统计
 	secondStageFiltered := 0
 	multiPeriodWeakFiltered := 0
+
+	if *onlyBottomRebound {
+		log.Printf("[抄底模式] 🟢 仅抄底模式已激活: 只保留 \"7天跌幅≥5%% + 1-3天内反弹\" 的饰品")
+	}
 
 	for i, candidate := range candidateItems {
 		if i%100 == 0 && i > 0 {
@@ -1367,8 +2352,8 @@ func runAnalysis(db *gorm.DB) {
 			latestPrice := currentSellPrice
 
 			// 1天前价格（假设每1.6秒采样一次，1天约54000次采样，取最近第54次）
-			var price1d, price7d, price30d float64
-			var has1d, has7d, has30d bool
+			var price1d, price2d, price3d, price7d, price30d float64
+			var has1d, has2d, has3d, has7d, has30d bool
 
 			// 简化：直接从历史快照中取对应时间点
 			now := time.Now()
@@ -1380,6 +2365,18 @@ func runAnalysis(db *gorm.DB) {
 					if age >= 23*time.Hour && age <= 25*time.Hour && !has1d {
 						price1d = *snapshot.YYYPSellPrice
 						has1d = true
+					}
+
+					// 2天前的价格（47-49小时）
+					if age >= 47*time.Hour && age <= 49*time.Hour && !has2d {
+						price2d = *snapshot.YYYPSellPrice
+						has2d = true
+					}
+
+					// 3天前的价格（71-73小时）
+					if age >= 71*time.Hour && age <= 73*time.Hour && !has3d {
+						price3d = *snapshot.YYYPSellPrice
+						has3d = true
 					}
 
 					// 7天前的价格（6.5-7.5天）
@@ -1397,30 +2394,153 @@ func runAnalysis(db *gorm.DB) {
 			}
 
 			// 计算涨跌幅
-			var rate1d, rate7d, rate30d float64
+			var rate1d, rate2d, rate3d, rate7d, rate30d float64
+			_ = rate2d  // 可能未使用，但保留作为完整的多周期分析框架
+			_ = rate3d  // 可能未使用
+			_ = rate30d // 30天涨跌幅在当前版本未使用，但保留框架
 			if has1d && price1d > 0 {
 				rate1d = (latestPrice - price1d) / price1d
+			}
+			if has2d && price2d > 0 {
+				rate2d = (latestPrice - price2d) / price2d
+			}
+			if has3d && price3d > 0 {
+				rate3d = (latestPrice - price3d) / price3d
 			}
 			if has7d && price7d > 0 {
 				rate7d = (latestPrice - price7d) / price7d
 			}
 			if has30d && price30d > 0 {
-				rate30d = (latestPrice - price30d) / price30d
+				_ = (latestPrice - price30d) / price30d // 30天涨跌幅计算但可能未在当前版本使用
 			}
 
-			// 短期操作策略：过滤多周期走弱的商品
-			// 如果1天和7天都在跌，认为短期风险大，跳过
-			if has1d && has7d && rate1d < 0 && rate7d < 0 {
-				multiPeriodWeakFiltered++
-				secondStageFiltered++
-				continue // 跳过多周期下跌的商品
-			}
+			// 短期操作策略：改为抄底策略而不是追涨
+			// 黄金买点：前期下跌（7天/30天），当前反弹（1-3天内）
+			// 要避免的：连续上涨（1天↑ + 7天↑）= 高位接盘
+			// 反弹必须及时（1-3天内），超过3天就要错失时机
 
-			// 如果1天、7天、30天都在跌，更要避免（防止接飞刀）
-			if has1d && has7d && has30d && rate1d < 0 && rate7d < 0 && rate30d < 0 {
-				multiPeriodWeakFiltered++
-				secondStageFiltered++
-				continue // 跳过多周期走弱的商品
+			// ===== 抄底模式过滤（如果启用了仅抄底模式）=====
+			if *onlyBottomRebound {
+				// 抄底模式：只保留真正的底部反弹信号
+				// 要求：3-7天下跌足够深（-5%以上） + 1-3天内有有力反弹
+
+				// 灵活周期检查：3天、4天、5天、6天、7天中的任何一个满足下跌条件
+				hasValidDecline := false
+				var declineRate float64
+
+				// 检查7天下跌
+				if has7d && rate7d < -0.05 {
+					hasValidDecline = true
+					declineRate = rate7d
+				}
+				// 检查6-7天下跌 - 稍微放宽一点
+				if !hasValidDecline && has7d && rate7d < -0.04 {
+					hasValidDecline = true
+					declineRate = rate7d
+				}
+				// 检查5天下跌 - 从3天数据推断
+				if !hasValidDecline && has3d && rate3d < -0.04 {
+					hasValidDecline = true
+					declineRate = rate3d * 1.5
+				}
+				// 检查4天下跌
+				if !hasValidDecline && has2d && rate2d < -0.03 {
+					hasValidDecline = true
+					declineRate = rate2d
+				}
+				// 检查3天下跌 - 需要最强的下跌
+				if !hasValidDecline && has1d && rate1d < -0.05 {
+					hasValidDecline = true
+					declineRate = rate1d
+				}
+
+				if hasValidDecline {
+					// 找最近的反弹点（1天、2天或3天内）
+					var latestRebound float64
+					var hasRebound bool
+
+					if has1d && rate1d > 0 {
+						latestRebound = rate1d
+						hasRebound = true
+					} else if has2d && rate2d > 0 {
+						latestRebound = rate2d
+						hasRebound = true
+					} else if has3d && rate3d > 0 {
+						latestRebound = rate3d
+						hasRebound = true
+					}
+
+					// 有反弹且在3天内
+					if hasRebound && latestRebound > 0 {
+						// 计算反弹恢复率：反弹幅度 / 跌幅
+						recoveryRate := latestRebound / (-declineRate)
+
+						// ⭐ 改进：反弹判断逻辑（追稳而非追涨）=====
+						// 确保选中的是"底部稳定反弹"而非"高位追涨"
+
+						// 反弹恢复率范围：必须在minRebound% ~ maxRebound%之间
+						// - 最低：必须恢复至少50%的跌幅（原来30%太低）
+						// - 最高：不超过跌幅的80%（防止追涨过度）
+						minRecoveryRate := *minRebound        // 从0.30提升至0.50
+						maxRecoveryRate := *maxRebound        // 新增：最高0.80
+						minAbsoluteReb := *minAbsoluteRebound // 从0.02提升至0.03
+
+						// 检查反弹是否在合理范围内
+						recoveryRateOK := recoveryRate >= minRecoveryRate && recoveryRate <= maxRecoveryRate
+						absoluteReOK := latestRebound >= minAbsoluteReb && latestRebound <= *maxAbsoluteRebound1d
+
+						// 单日反弹不能超过5%
+						if has1d && latestRebound == rate1d && rate1d > *maxAbsoluteRebound1d {
+							// 1天反弹超过5%，标记为风险较高但仍保留
+						}
+
+						if recoveryRateOK || absoluteReOK {
+							// 反弹在合理范围内，这是底部反弹信号！✅
+							// 在抄底模式下，这是符合条件的商品
+						} else {
+							// 反弹不在合理范围内，需要排除
+							secondStageFiltered++
+							continue
+						}
+					} else {
+						// 没有有效反弹，排除
+						secondStageFiltered++
+						continue
+					}
+				} else {
+					// 没有足够的前期下跌，在抄底模式下排除
+					secondStageFiltered++
+					continue
+				}
+			} else {
+				// ===== 全量分析模式：过滤持续下跌的商品 =====
+				// 要避免的：连续多日下跌（特别是1天 AND 7天都在跌）
+				// 因为这表示价格在持续恶化，风险很大
+
+				// 检查是否存在多日连续下跌
+				consecutiveDownDays := 0
+				if has1d && rate1d < 0 {
+					consecutiveDownDays++
+				}
+				if has2d && rate2d < 0 {
+					consecutiveDownDays++
+				}
+				if has3d && rate3d < 0 {
+					consecutiveDownDays++
+				}
+
+				// 如果1天和7天都在跌，表示持续下跌趋势，需要过滤
+				if has1d && has7d && rate1d < 0 && rate7d < 0 && rate7d < -0.02 {
+					// 持续下跌且7天跌幅超过2%，排除
+					secondStageFiltered++
+					continue
+				}
+
+				// 如果连续3天都在跌，也排除
+				if consecutiveDownDays >= 3 {
+					secondStageFiltered++
+					continue
+				}
 			}
 		}
 
@@ -1527,6 +2647,7 @@ func runAnalysis(db *gorm.DB) {
 			RiskLevel:           riskLevel,
 			BuyOrderCount:       candidate.buyOrderCount,
 			SellOrderCount:      candidate.sellOrderCount,
+			RankNum:             candidate.rankNum, // 热度排名
 			RecommendedBuyPrice: recommendedBuyPrice,
 			RecommendedQuantity: recommendedQuantity,
 			AnalysisTime:        analysisTime,
@@ -1577,12 +2698,9 @@ func runAnalysis(db *gorm.DB) {
 		return scoreI > scoreJ
 	})
 
-	// 输出评分最高的前20个商品（用于详细分析）
-	log.Printf("[套利分析] ==================== 量化评分 TOP 20 ====================")
-	displayCount := 20
-	if len(opportunities) < displayCount {
-		displayCount = len(opportunities)
-	}
+	// 输出所有评分的商品（用于详细分析）
+	log.Printf("[套利分析] ==================== 量化评分详情 (共 %d 个) ====================", len(opportunities))
+	displayCount := len(opportunities) // 显示所有找到的机会
 
 	log.Printf("%-4s %-50s %8s %6s %6s %8s %8s %6s",
 		"排名", "商品名称", "综合评分", "类型", "磨损", "利润率", "趋势", "风险")
@@ -1748,6 +2866,25 @@ func runAnalysis(db *gorm.DB) {
 		log.Printf("[套利分析] 成功保存 %d 条套利机会", len(opportunities))
 	}
 
+	// ==================== 第三阶段：二次验证价格 ====================
+	// 在生成套利清单后，通过OpenAPI再次获取实时价格，确保机会仍然有效
+	log.Printf("[套利分析] ==================== 第三阶段：二次验证套利清单价格 ====================")
+	// 只验证购买清单中的饰品（根据预算确定）
+	verifiedOpportunities := verifyOpportunitiesPrices(db, ypClient, opportunities, purchaseList, *ypTimeoutSec)
+	log.Printf("[套利分析] 验证完成! 原始 %d 个，购买清单 %d 个，验证通过 %d 个", len(opportunities), len(purchaseList), len(verifiedOpportunities))
+
+	// 保留原始opportunities用于后续输出清单查询
+	originalOpportunities := opportunities
+
+	// 用验证后的机会清单替换原清单
+	opportunities = verifiedOpportunities
+
+	// 如果验证后没有有效的机会，则退出
+	if len(opportunities) == 0 {
+		log.Printf("[验证结果] 验证后没有符合条件的套利机会，本轮分析停止")
+		return
+	}
+
 	// 创建最优求购计划（清单）
 	if len(purchaseList) > 0 {
 		totalCost := *budget - remainingBudget
@@ -1771,38 +2908,47 @@ func runAnalysis(db *gorm.DB) {
 				log.Printf("[求购计划] 将保存good_id，执行时再获取template_id")
 			}
 
-			var ypClient *youpin.Client
-			if account.ID > 0 {
-				ypClient, _ = youpin.NewClient(account.Token)
-			}
-
 			// 保存计划明细
 			planItems := []models.PurchasePlanItem{}
-			ctx := context.Background()
 
 			for _, item := range purchaseList {
 				// 从opportunities中找到对应的风险等级和利润率
 				var profitRate float64
 				var riskLevel string
+
+				// 首先从验证后的opportunities中查找
+				found := false
 				for _, opp := range opportunities {
 					if opp.GoodID == item.GoodID {
 						profitRate = opp.ProfitRate
 						riskLevel = opp.RiskLevel
+						found = true
 						break
 					}
 				}
 
-				var yyypTemplateID *int64
-				// 如果有YouPin客户端，通过商品名称搜索获取template_id
-				if ypClient != nil {
-					searchResp, err := ypClient.SearchItems(ctx, item.GoodName, 1, 1, 0)
-					if err == nil && searchResp != nil && len(searchResp.Data.CommodityTemplateList) > 0 {
-						templateID := int64(searchResp.Data.CommodityTemplateList[0].ID)
-						yyypTemplateID = &templateID
-						log.Printf("[求购计划] 商品 %s 对应的YouPin TemplateID: %d", item.GoodName, templateID)
-					} else {
-						log.Printf("[求购计划] 未能获取商品 %s 的YouPin TemplateID: %v", item.GoodName, err)
+				// 如果在验证后列表中找不到，从原始opportunities中查找（作为备用）
+				if !found {
+					for _, opp := range originalOpportunities {
+						if opp.GoodID == item.GoodID {
+							profitRate = opp.ProfitRate
+							riskLevel = opp.RiskLevel
+							// 记录这个商品在验证后列表中缺失的情况
+							log.Printf("[⚠️ 警告] 商品 %s (ID:%d) 在验证后的opportunities中缺失，使用原始数据。利润率:%.2f%% 可能已变化", item.GoodName, item.GoodID, profitRate*100)
+							break
+						}
 					}
+				}
+
+				// 注意：OpenAPI不支持搜索功能，template_id需要从snapshot表获取或执行时再查询
+				var yyypTemplateID *int64
+				// 尝试从CSQAQ商品快照表获取template_id
+				var snapshot models.CSQAQGoodSnapshot
+				if err := db.Where("good_id = ? AND yyyp_template_id IS NOT NULL", item.GoodID).
+					Order("created_at DESC").
+					First(&snapshot).Error; err == nil && snapshot.YYYPTemplateID != nil {
+					yyypTemplateID = snapshot.YYYPTemplateID
+					log.Printf("[求购计划] 从快照获取商品 %s 的YouPin TemplateID: %d", item.GoodName, *yyypTemplateID)
 				}
 
 				planItems = append(planItems, models.PurchasePlanItem{
@@ -1842,6 +2988,10 @@ func runAnalysis(db *gorm.DB) {
 			var priceTrend string
 			var avgBuyPrice7d float64
 			var avgSellPrice7d float64
+			var currentSellPrice float64
+
+			// 首先从验证后的opportunities中查找
+			found := false
 			for _, opp := range opportunities {
 				if opp.GoodID == item.GoodID {
 					profitRate = opp.ProfitRate
@@ -1849,7 +2999,26 @@ func runAnalysis(db *gorm.DB) {
 					priceTrend = opp.PriceTrend
 					avgBuyPrice7d = opp.AvgBuyPrice7d
 					avgSellPrice7d = opp.AvgSellPrice7d
+					currentSellPrice = opp.CurrentSellPrice
+					found = true
 					break
+				}
+			}
+
+			// 如果在验证后列表中找不到，从原始opportunities中查找（作为备用）
+			if !found {
+				for _, opp := range originalOpportunities {
+					if opp.GoodID == item.GoodID {
+						profitRate = opp.ProfitRate
+						riskLevel = opp.RiskLevel
+						priceTrend = opp.PriceTrend
+						avgBuyPrice7d = opp.AvgBuyPrice7d
+						avgSellPrice7d = opp.AvgSellPrice7d
+						currentSellPrice = opp.CurrentSellPrice
+						// 记录这个商品在验证后列表中缺失的情况
+						log.Printf("[⚠️ 警告] 商品 %s (ID:%d) 在验证后的opportunities中缺失，使用原始数据。利润率:%.2f%% 可能已变化", item.GoodName, item.GoodID, profitRate*100)
+						break
+					}
 				}
 			}
 
@@ -1902,13 +3071,6 @@ func runAnalysis(db *gorm.DB) {
 				i+1, displayName, item.GoodID, item.Quantity, item.Price, item.Total, riskIcon)
 
 			// 计算单品预期利润: (售价*0.99 - 买价) * 数量
-			var currentSellPrice float64
-			for _, opp := range opportunities {
-				if opp.GoodID == item.GoodID {
-					currentSellPrice = opp.CurrentSellPrice
-					break
-				}
-			}
 			singleItemProfit := (currentSellPrice*0.99 - item.Price) * float64(item.Quantity)
 
 			log.Printf("     利润率:%.1f%% | 趋势:%s | 周期:%s(%.1f%%) | 预期利润:¥%.2f",
@@ -1945,7 +3107,8 @@ func runAnalysis(db *gorm.DB) {
 }
 
 // fetchRealtimePrice 获取YouPin实时最高求购价与最低在售价（带可选限速）
-func fetchRealtimePrice(db *gorm.DB, ypClient *youpin.Client, limiter <-chan time.Time, goodID int64, goodName string, timeoutSec int) (out struct {
+// 现在使用OpenAPI接口获取更准确的价格信息
+func fetchRealtimePrice(db *gorm.DB, ypClient *youpin.OpenAPIClient, limiter <-chan time.Time, goodID int64, goodName string, timeoutSec int) (out struct {
 	buy       float64
 	sell      float64
 	buyCount  int
@@ -1956,41 +3119,37 @@ func fetchRealtimePrice(db *gorm.DB, ypClient *youpin.Client, limiter <-chan tim
 		reason = "ypClient is nil"
 		return
 	}
-	// 获取模板ID：优先快照，其次搜索
+	// 获取模板ID：优先快照，其次不再需要搜索（OpenAPI接口需要准确的模板ID）
 	var templateID int64
 	var snap models.CSQAQGoodSnapshot
 	if err := db.Where("good_id = ?", goodID).Order("created_at DESC").First(&snap).Error; err == nil && snap.YYYPTemplateID != nil && *snap.YYYPTemplateID > 0 {
 		templateID = *snap.YYYPTemplateID
 	} else {
-		if limiter != nil {
-			<-limiter
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
-		defer cancel()
-		if resp, err := ypClient.SearchItems(ctx, goodName, 1, 1, 0); err == nil && resp != nil && len(resp.Data.CommodityTemplateList) > 0 {
-			templateID = int64(resp.Data.CommodityTemplateList[0].ID)
-		} else {
-			if err != nil {
-				reason = "search template failed: " + err.Error()
-			} else {
-				reason = "search template no result"
-			}
-		}
-	}
-	if templateID == 0 {
-		if reason == "" {
-			reason = "no template id"
-		}
+		// 如果没有快照中的模板ID，返回失败
+		reason = "no template id in snapshot"
 		return
 	}
-	// 最高求购价
+	if templateID == 0 {
+		reason = "no template id"
+		return
+	}
+
+	// 最高求购价 - 使用Token认证的求购接口
 	maxBuy := 0.0
 	if limiter != nil {
 		<-limiter
 	}
 	ctx1, cancel1 := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
 	defer cancel1()
-	if po, err := ypClient.GetTemplatePurchaseOrderList(ctx1, int(templateID), 1, 50); err == nil && po != nil {
+
+	// 使用OpenAPIClient的求购接口（内部使用Token认证）
+	purchaseReq := &youpin.GetTemplatePurchaseOrderListRequest{
+		TemplateId:       int(templateID),
+		PageIndex:        1,
+		PageSize:         50,
+		ShowMaxPriceFlag: false,
+	}
+	if po, err := ypClient.GetTemplatePurchaseOrderList(ctx1, purchaseReq); err == nil && po != nil {
 		for _, item := range po.Data {
 			if item.PurchasePrice > maxBuy {
 				maxBuy = item.PurchasePrice
@@ -2000,26 +3159,34 @@ func fetchRealtimePrice(db *gorm.DB, ypClient *youpin.Client, limiter <-chan tim
 	} else if err != nil {
 		reason = "get purchase list failed: " + err.Error()
 	}
-	// 最低在售价
+
+	// 最低在售价 - 使用OpenAPI签名认证接口
 	lowestSell := 0.0
 	if limiter != nil {
 		<-limiter
 	}
 	ctx2, cancel2 := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
 	defer cancel2()
-	if mp, err := ypClient.GetMarketSalePrice(ctx2, strconv.FormatInt(templateID, 10)); err == nil && mp != nil && len(mp) > 0 {
-		out.sellCount = len(mp)
-		for i, p := range mp {
-			if i == 0 || p.Price < lowestSell {
-				lowestSell = p.Price
-			}
+
+	// 使用BatchGetOnSaleCommodityInfo获取在售价格
+	tempID := int(templateID)
+	requestList := []youpin.BatchPriceQueryItem{
+		{TemplateID: &tempID},
+	}
+	if priceResp, err := ypClient.BatchGetOnSaleCommodityInfo(ctx2, requestList); err == nil && priceResp != nil && len(priceResp.Data) > 0 {
+		// 解析最低在售价
+		if minPrice, parseErr := strconv.ParseFloat(priceResp.Data[0].SaleCommodityResponse.MinSellPrice, 64); parseErr == nil {
+			lowestSell = minPrice
 		}
+		// 解析在售数量
+		out.sellCount = priceResp.Data[0].SaleCommodityResponse.SellNum
 	} else if err != nil {
 		if reason != "" {
 			reason += "; "
 		}
 		reason += "get market price failed: " + err.Error()
 	}
+
 	if maxBuy > 0 && lowestSell > 0 {
 		out.buy = maxBuy
 		out.sell = lowestSell
@@ -2031,6 +3198,185 @@ func fetchRealtimePrice(db *gorm.DB, ypClient *youpin.Client, limiter <-chan tim
 		}
 	}
 	return
+}
+
+// getLatestMaxBuyPrice 仅获取指定商品模板的最新最高求购价
+func getLatestMaxBuyPrice(db *gorm.DB, ypClient *youpin.OpenAPIClient, goodID int64, timeoutSec int) (float64, error) {
+	if ypClient == nil {
+		return 0, fmt.Errorf("ypClient is nil")
+	}
+	// 获取模板ID
+	var snap models.CSQAQGoodSnapshot
+	if err := db.Where("good_id = ?", goodID).Order("created_at DESC").First(&snap).Error; err != nil || snap.YYYPTemplateID == nil || *snap.YYYPTemplateID == 0 {
+		return 0, fmt.Errorf("no template id for good %d", goodID)
+	}
+	templateID := int(*snap.YYYPTemplateID)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+	defer cancel()
+	req := &youpin.GetTemplatePurchaseOrderListRequest{
+		TemplateId:       templateID,
+		PageIndex:        1,
+		PageSize:         50,
+		ShowMaxPriceFlag: false,
+	}
+	resp, err := ypClient.GetTemplatePurchaseOrderList(ctx, req)
+	if err != nil || resp == nil {
+		if err != nil {
+			return 0, err
+		}
+		return 0, fmt.Errorf("empty response")
+	}
+	maxBuy := 0.0
+	for _, it := range resp.Data {
+		if it.PurchasePrice > maxBuy {
+			maxBuy = it.PurchasePrice
+		}
+	}
+	return maxBuy, nil
+}
+
+// bumpPurchasePrice 按区间步进规则，将最高求购价加一个最小步进并保留对应精度
+// 区间：
+//
+//	0～1: 步进0.01；1～50: 0.1；50～1000: 1
+//
+// 示例：39 => 39.1；51 => 52
+func bumpPurchasePrice(maxBuy float64) float64 {
+	if maxBuy < 0 {
+		maxBuy = 0
+	}
+	var step float64
+	var decimals float64
+	switch {
+	case maxBuy < 1:
+		step = 0.01
+		decimals = 2
+	case maxBuy < 50:
+		step = 0.1
+		decimals = 1
+	default:
+		step = 1
+		decimals = 0
+	}
+	// 向下对齐到步进倍数，再+一步
+	base := math.Floor(maxBuy/step) * step
+	bumped := base + step
+	// 规整小数位
+	pow := math.Pow(10, decimals)
+	return math.Round(bumped*pow) / pow
+}
+
+// placeImmediatePurchaseOrder 根据模板ID信息发起立即求购下单
+// 流程：获取模板求购信息 -> 预检查 -> 创建订单（处理价格警告/重复订单确认）
+func placeImmediatePurchaseOrder(db *gorm.DB, ypClient *youpin.OpenAPIClient, goodID int64, goodName string, quantity int, purchasePrice float64, timeoutSec int) error {
+	if ypClient == nil {
+		return fmt.Errorf("ypClient is nil")
+	}
+	// 获取模板ID
+	var snap models.CSQAQGoodSnapshot
+	if err := db.Where("good_id = ?", goodID).Order("created_at DESC").First(&snap).Error; err != nil || snap.YYYPTemplateID == nil || *snap.YYYPTemplateID == 0 {
+		return fmt.Errorf("no template id for good %d", goodID)
+	}
+	templateIDStr := fmt.Sprintf("%d", *snap.YYYPTemplateID)
+
+	// 获取模板求购信息（包含hashName、参考价、最小在售价、最大求购价）
+	ctxInfo, cancelInfo := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+	defer cancelInfo()
+	info, err := ypClient.GetTemplatePurchaseInfo(ctxInfo, templateIDStr)
+	if err != nil || info == nil {
+		if err != nil {
+			return fmt.Errorf("get template purchase info failed: %w", err)
+		}
+		return fmt.Errorf("get template purchase info failed: empty response")
+	}
+	tpl := info.Data.TemplateInfo
+
+	// 预检查
+	totalAmount := purchasePrice * float64(quantity)
+	minSell, _ := strconv.ParseFloat(tpl.MinSellPrice, 64)
+	maxPurchase, _ := strconv.ParseFloat(tpl.MaxPurchasePrice, 64)
+
+	preReq := &youpin.PrePurchaseOrderCheckRequest{
+		SpecialStyleObj:      map[string]interface{}{},
+		IsCheckMaxPrice:      false,
+		TemplateHashName:     tpl.TemplateHashName,
+		TotalAmount:          totalAmount,
+		ReferencePrice:       tpl.ReferencePrice,
+		PurchasePrice:        purchasePrice,
+		PurchaseNum:          quantity,
+		DiscountAmount:       0,
+		MinSellPrice:         minSell,
+		MaxPurchasePrice:     maxPurchase,
+		TemplateId:           templateIDStr,
+		IncrementServiceCode: nil,
+	}
+
+	ctxPre, cancelPre := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+	_, _ = ypClient.PrePurchaseOrderCheck(ctxPre, preReq) // 失败也尝试走保存逻辑，由保存接口处理确认
+	cancelPre()
+
+	// 首次创建订单
+	templateIDInt := tpl.TemplateId
+	saveReq := &youpin.SavePurchaseOrderRequest{
+		TemplateId:            templateIDInt,
+		TemplateHashName:      tpl.TemplateHashName,
+		CommodityName:         tpl.CommodityName,
+		ReferencePrice:        tpl.ReferencePrice,
+		MinSellPrice:          tpl.MinSellPrice,
+		MaxPurchasePrice:      tpl.MaxPurchasePrice,
+		PurchasePrice:         purchasePrice,
+		PurchaseNum:           quantity,
+		NeedPaymentAmount:     totalAmount,
+		TotalAmount:           totalAmount,
+		TemplateName:          tpl.CommodityName,
+		PriceDifference:       0,
+		DiscountAmount:        0,
+		PayConfirmFlag:        false,
+		RepeatOrderCancelFlag: false,
+	}
+
+	ctxSave, cancelSave := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+	resp, err := ypClient.SavePurchaseOrder(ctxSave, saveReq)
+	cancelSave()
+	if err == nil && resp != nil {
+		return nil
+	}
+
+	// 错误处理：尝试处理重复订单确认与价格警告
+	if err != nil {
+		msg := err.Error()
+		if strings.Contains(msg, "REPEAT_ORDER_CONFIRM") {
+			saveReq.RepeatOrderCancelFlag = true
+			ctx1, c1 := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+			resp, err = ypClient.SavePurchaseOrder(ctx1, saveReq)
+			c1()
+			if err == nil && resp != nil {
+				return nil
+			}
+			if err != nil && strings.Contains(err.Error(), "PRICE_WARNING") {
+				saveReq.PayConfirmFlag = true
+				ctx2, c2 := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+				resp, err = ypClient.SavePurchaseOrder(ctx2, saveReq)
+				c2()
+				if err == nil && resp != nil {
+					return nil
+				}
+			}
+		} else if strings.Contains(msg, "PRICE_WARNING") {
+			saveReq.PayConfirmFlag = true
+			ctx3, c3 := context.WithTimeout(context.Background(), time.Duration(timeoutSec)*time.Second)
+			resp, err = ypClient.SavePurchaseOrder(ctx3, saveReq)
+			c3()
+			if err == nil && resp != nil {
+				return nil
+			}
+		}
+	}
+
+	if err != nil {
+		return fmt.Errorf("save purchase order failed: %w", err)
+	}
+	return fmt.Errorf("save purchase order failed: unknown error")
 }
 
 // archiveCurrentOpportunities copies current arbitrage_opportunities rows
@@ -2079,4 +3425,376 @@ func archiveCurrentOpportunities(db *gorm.DB) error {
 		return err
 	}
 	return tx.Commit().Error
+}
+
+// ============ 新增：高级技术指标计算模块 ============
+
+// CalculateBollingerBands 计算布林带 (Bollinger Bands)
+// 返回: (upper, mid, lower)
+func CalculateBollingerBands(prices []float64, period int, numStdDev float64) (float64, float64, float64) {
+	if len(prices) < period {
+		return 0, 0, 0
+	}
+
+	// 使用最后 period 个价格计算
+	recentPrices := prices[len(prices)-period:]
+
+	// 计算中线（SMA）
+	sum := 0.0
+	for _, p := range recentPrices {
+		sum += p
+	}
+	mid := sum / float64(period)
+
+	// 计算标准差
+	variance := 0.0
+	for _, p := range recentPrices {
+		diff := p - mid
+		variance += diff * diff
+	}
+	variance /= float64(period)
+	stdDev := math.Sqrt(variance)
+
+	upper := mid + numStdDev*stdDev
+	lower := mid - numStdDev*stdDev
+
+	return upper, mid, lower
+}
+
+// CalculateRSI 计算相对强弱指标 (RSI)
+func CalculateRSI(prices []float64, period int) float64 {
+	if len(prices) < period+1 {
+		return 50.0 // 数据不足，返回中性值
+	}
+
+	// 计算价格变化
+	gains := 0.0
+	losses := 0.0
+
+	for i := len(prices) - period; i < len(prices); i++ {
+		change := prices[i] - prices[i-1]
+		if change > 0 {
+			gains += change
+		} else {
+			losses += -change
+		}
+	}
+
+	avgGain := gains / float64(period)
+	avgLoss := losses / float64(period)
+
+	if avgLoss == 0 {
+		if avgGain > 0 {
+			return 100.0
+		}
+		return 50.0
+	}
+
+	rs := avgGain / avgLoss
+	rsi := 100 - (100 / (1 + rs))
+
+	return rsi
+}
+
+// CalculateMACD 计算MACD指标
+// 返回: (macd_line, signal_line, histogram)
+func CalculateMACD(prices []float64) (float64, float64, float64) {
+	if len(prices) < 26 {
+		return 0, 0, 0
+	}
+
+	// EMA12
+	ema12 := calculateEMA(prices, 12)
+
+	// EMA26
+	ema26 := calculateEMA(prices, 26)
+
+	// MACD = EMA12 - EMA26
+	macLine := ema12 - ema26
+
+	// Signal Line = EMA(MACD, 9)
+	// 简化：使用最近的EMA值作为signal
+	signalLine := (macLine + ema12) / 2
+
+	histogram := macLine - signalLine
+
+	return macLine, signalLine, histogram
+}
+
+// calculateEMA 计算指数移动平均线
+func calculateEMA(prices []float64, period int) float64 {
+	if len(prices) < period {
+		return 0
+	}
+
+	// 初始SMA
+	sum := 0.0
+	for i := 0; i < period; i++ {
+		sum += prices[i]
+	}
+	ema := sum / float64(period)
+
+	// 计算乘数
+	multiplier := 2.0 / float64(period+1)
+
+	// 计算后续EMA
+	for i := period; i < len(prices); i++ {
+		ema = prices[i]*multiplier + ema*(1-multiplier)
+	}
+
+	return ema
+}
+
+// MultiIndicatorSignal 5信号投票融合系统
+type MultiIndicatorSignal struct {
+	BollingerBand bool // 信号1: price < BB_lower
+	RSIExtreme    bool // 信号2: RSI < 30
+	MAXover       bool // 信号3: MA5 > MA20（上涨信号）
+	ConsecutiveMA bool // 信号4: 连续3天 price < MA20
+	MACDCross     bool // 信号5: MACD > Signal（动能转正）
+}
+
+// EvaluateMultiIndicators 综合评估5个技术指标，返回是否满足买入条件
+func EvaluateMultiIndicators(prices []float64, sellPrices []float64) MultiIndicatorSignal {
+	signal := MultiIndicatorSignal{
+		BollingerBand: false,
+		RSIExtreme:    false,
+		MAXover:       false,
+		ConsecutiveMA: false,
+		MACDCross:     false,
+	}
+
+	if len(prices) < 20 || len(sellPrices) < 20 {
+		return signal
+	}
+
+	// 信号1: 布林带策略 - price < BB_lower
+	if len(sellPrices) >= 20 {
+		_, _, lower := CalculateBollingerBands(sellPrices, 20, 2.0)
+		currentPrice := sellPrices[len(sellPrices)-1]
+		if currentPrice < lower && lower > 0 {
+			signal.BollingerBand = true
+		}
+	}
+
+	// 信号2: RSI极端值 - RSI < 30
+	if len(sellPrices) >= 14 {
+		rsi := CalculateRSI(sellPrices, 14)
+		if rsi < 30 {
+			signal.RSIExtreme = true
+		}
+	}
+
+	// 信号3: MA交叉 - MA5 > MA20
+	if len(sellPrices) >= 20 {
+		ma5 := calculateSimpleMA(sellPrices, 5)
+		ma20 := calculateSimpleMA(sellPrices, 20)
+		if ma5 > ma20 {
+			signal.MAXover = true
+		}
+	}
+
+	// 信号4: 连续3天低于MA20
+	if len(sellPrices) >= 20 {
+		ma20 := calculateSimpleMA(sellPrices, 20)
+		consecutiveCount := 0
+		for i := len(sellPrices) - 3; i < len(sellPrices); i++ {
+			if i >= 0 && sellPrices[i] < ma20 {
+				consecutiveCount++
+			}
+		}
+		if consecutiveCount >= 3 {
+			signal.ConsecutiveMA = true
+		}
+	}
+
+	// 信号5: MACD金叉
+	if len(sellPrices) >= 26 {
+		// 获取当前和前一个时间点的MACD
+		currMACD, currSignal, _ := CalculateMACD(sellPrices)
+		// 前一个时间点（简化：使用历史数据的最后一个）
+		prevPrices := sellPrices[:len(sellPrices)-1]
+		if len(prevPrices) >= 26 {
+			prevMACD, prevSignal, _ := CalculateMACD(prevPrices)
+			// 金叉：前一个MACD < Signal，当前MACD > Signal
+			if prevMACD < prevSignal && currMACD > currSignal {
+				signal.MACDCross = true
+			}
+		}
+	}
+
+	return signal
+}
+
+// calculateSimpleMA 计算简单移动平均
+func calculateSimpleMA(prices []float64, period int) float64 {
+	if len(prices) < period {
+		return 0
+	}
+	sum := 0.0
+	for i := len(prices) - period; i < len(prices); i++ {
+		sum += prices[i]
+	}
+	return sum / float64(period)
+}
+
+// CheckBuySignal 根据投票融合规则判断是否应该买入
+// 硬性条件：必须同时满足信号1和信号2
+// 额外确认：信号3/4/5中至少2个满足
+// 返回：(应该买入, 原因)
+func CheckBuySignal(signal MultiIndicatorSignal) (bool, string) {
+	// 硬性条件：必须同时满足布林带和RSI
+	if !signal.BollingerBand || !signal.RSIExtreme {
+		return false, "硬性条件不满足（需要布林带下轨+RSI超卖）"
+	}
+
+	// 额外确认：信号3/4/5中至少2个满足
+	additionalSignals := 0
+	if signal.MAXover {
+		additionalSignals++
+	}
+	if signal.ConsecutiveMA {
+		additionalSignals++
+	}
+	if signal.MACDCross {
+		additionalSignals++
+	}
+
+	if additionalSignals < 2 {
+		return false, fmt.Sprintf("额外确认不足（需要3/4/5中至少2个，当前满足%d个）", additionalSignals)
+	}
+
+	return true, "所有条件满足，推荐买入"
+}
+
+// ============ 市场风险检测模块 ============
+
+// MarketRiskInfo 市场风险信息
+type MarketRiskInfo struct {
+	SuccessRate    float64 // 历史成功率
+	AvgROI         float64 // 平均ROI
+	RiskLevel      string  // 风险等级: "green", "yellow", "red"
+	Recommendation string  // 建议
+}
+
+// DetectMarketRisk 检测市场整体风险
+func DetectMarketRisk(db *gorm.DB) MarketRiskInfo {
+	info := MarketRiskInfo{
+		SuccessRate:    0.5,
+		AvgROI:         0.0,
+		RiskLevel:      "green",
+		Recommendation: "市场状况正常，按标准策略执行",
+	}
+
+	// 查询最近7天的推荐记录
+	sevenDaysAgo := time.Now().AddDate(0, 0, -7)
+	var recommendations []models.ArbitrageOpportunity
+
+	if err := db.Where("analysis_time >= ? AND recommended_quantity > 0", sevenDaysAgo).
+		Find(&recommendations).Error; err != nil || len(recommendations) == 0 {
+		return info
+	}
+
+	// 统计成功率和ROI
+	successCount := 0
+	totalROI := 0.0
+
+	for _, rec := range recommendations {
+		// 检查该商品现在是否仍在推荐清单中（简化检查：是否还有正ROI预期）
+		if rec.EstimatedProfit > 0 {
+			successCount++
+		}
+		totalROI += rec.ProfitRate
+	}
+
+	info.SuccessRate = float64(successCount) / float64(len(recommendations))
+	info.AvgROI = totalROI / float64(len(recommendations))
+
+	// 风险等级判断
+	if info.AvgROI < 0 {
+		info.RiskLevel = "red"
+		info.Recommendation = "🔴市场风险警告：平均ROI为负，自动提升推荐阈值"
+	} else if info.SuccessRate < 0.4 {
+		info.RiskLevel = "yellow"
+		info.Recommendation = "🟡市场警告：成功率低于40%，建议提升利润率阈值"
+	} else if info.AvgROI > 0.10 {
+		info.RiskLevel = "green"
+		info.Recommendation = "✅市场状况良好，平均ROI>10%"
+	}
+
+	return info
+}
+
+// ============ 自适应策略调整模块 ============
+
+// StrategyAdjustment 策略调整记录
+type StrategyAdjustment struct {
+	Time      time.Time
+	Reason    string
+	OldParams map[string]interface{}
+	NewParams map[string]interface{}
+}
+
+var strategyAdjustmentLog []StrategyAdjustment
+
+// ApplyAdaptiveAdjustment 根据市场风险应用自适应策略调整
+func ApplyAdaptiveAdjustment(marketRisk MarketRiskInfo) {
+	adjustment := StrategyAdjustment{
+		Time:      time.Now(),
+		OldParams: make(map[string]interface{}),
+		NewParams: make(map[string]interface{}),
+	}
+
+	shouldAdjust := false
+
+	// 黄色预警：提升利润率阈值
+	if marketRisk.RiskLevel == "yellow" && *minProfitRate < 0.10 {
+		adjustment.OldParams["minProfitRate"] = *minProfitRate
+		*minProfitRate = 0.10
+		adjustment.NewParams["minProfitRate"] = 0.10
+		adjustment.Reason = fmt.Sprintf("黄色预警 - 成功率%.1f%% < 40%%", marketRisk.SuccessRate*100)
+		shouldAdjust = true
+	}
+
+	// 红色预警：大幅提升阈值
+	if marketRisk.RiskLevel == "red" {
+		adjustment.OldParams["minProfitRate"] = *minProfitRate
+		*minProfitRate = 0.12
+		adjustment.NewParams["minProfitRate"] = 0.12
+		shouldAdjust = true
+
+		// 降低波动率阈值（选择更稳定的商品）
+		adjustment.Reason = fmt.Sprintf("红色预警 - 市场平均ROI%.2f%% < 0", marketRisk.AvgROI*100)
+	}
+
+	if shouldAdjust {
+		strategyAdjustmentLog = append(strategyAdjustmentLog, adjustment)
+		log.Printf("[自适应调整] %s", adjustment.Reason)
+		log.Printf("  - 利润率阈值: %.2f%% -> %.2f%%",
+			adjustment.OldParams["minProfitRate"],
+			adjustment.NewParams["minProfitRate"])
+	}
+}
+
+// SaveAdjustmentLog 保存策略调整日志
+func SaveAdjustmentLog(filepath string) error {
+	if len(strategyAdjustmentLog) == 0 {
+		return nil
+	}
+
+	var output strings.Builder
+	output.WriteString("策略自适应调整日志\n")
+	output.WriteString("==========================================\n")
+
+	for _, adj := range strategyAdjustmentLog {
+		output.WriteString(fmt.Sprintf("\n【%s】\n", adj.Time.Format("2006-01-02 15:04:05")))
+		output.WriteString(fmt.Sprintf("原因: %s\n", adj.Reason))
+		output.WriteString("参数变更:\n")
+		for key, oldVal := range adj.OldParams {
+			newVal := adj.NewParams[key]
+			output.WriteString(fmt.Sprintf("  %s: %v -> %v\n", key, oldVal, newVal))
+		}
+	}
+
+	return os.WriteFile(filepath, []byte(output.String()), 0644)
 }

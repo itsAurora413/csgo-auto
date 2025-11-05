@@ -591,7 +591,7 @@ func getDefaultConfig() *Config {
 		APIToken:    "UAXMU177X578K1Q9E1G0N5M8",
 		APIBaseURL:  "https://api.csqaq.com/api/v1",
 		APITimeout:  15 * time.Second,
-		DatabaseDSN: "root:Wyj250413.@tcp(23.254.215.62:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local",
+		DatabaseDSN: "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local",
 		RangeStart:  0,
 		RangeEnd:    24041,
 		BatchSize:   50,

@@ -1,0 +1,238 @@
+{
+  "analysis_date": "2025-10-14T12:25:13.302176+08:00",
+  "period": "30天",
+  "total_items": 5958,
+  "overall_trend": "down",
+  "trend_strength": 4.516754149642531,
+  "price_change": {
+    "avg_change_percent": 115.40554704309524,
+    "median_change": 0.2631658197146476,
+    "volatility_index": 387.40722718843307,
+    "items_up": 5,
+    "items_down": 5,
+    "items_stable": 1
+  },
+  "volume_stats": {
+    "avg_daily_volume": 4276455.583333333,
+    "volume_growth": 42.80188181692714,
+    "high_volume_items": 0
+  },
+  "top_gainers": [
+    {
+      "good_id": 19414,
+      "good_name": "AUG | 代达罗斯之殇 (战痕累累)",
+      "price_start": 39.4,
+      "price_end": 888888,
+      "change_percent": 2255960.9137055837,
+      "volume_change": 0
+    },
+    {
+      "good_id": 13514,
+      "good_name": "PP-野牛 | 开关箱 (略有磨损)",
+      "price_start": 31,
+      "price_end": 6500,
+      "change_percent": 20867.74193548387,
+      "volume_change": 0
+    },
+    {
+      "good_id": 11501,
+      "good_name": "MP7 | 枯焦之色 (破损不堪)",
+      "price_start": 55,
+      "price_end": 9888,
+      "change_percent": 17878.18181818182,
+      "volume_change": 0
+    },
+    {
+      "good_id": 1617,
+      "good_name": "MP9 | 蛊惑之色 (略有磨损)",
+      "price_start": 108,
+      "price_end": 9999,
+      "change_percent": 9158.333333333332,
+      "volume_change": 0
+    },
+    {
+      "good_id": 9844,
+      "good_name": "加利尔 AR（StatTrak™） | 信号灯 (破损不堪)",
+      "price_start": 13.5,
+      "price_end": 200,
+      "change_percent": 1381.4814814814815,
+      "volume_change": 0
+    },
+    {
+      "good_id": 17756,
+      "good_name": "截短霰弹枪 | 荒野公主 (战痕累累)",
+      "price_start": 20.21,
+      "price_end": 288,
+      "change_percent": 1325.0371103414152,
+      "volume_change": 0
+    },
+    {
+      "good_id": 12858,
+      "good_name": "P250 | 暮色森林 (崭新出厂)",
+      "price_start": 24.98,
+      "price_end": 300,
+      "change_percent": 1100.9607686148918,
+      "volume_change": 0
+    },
+    {
+      "good_id": 18265,
+      "good_name": "MAG-7 | 危机色调 (久经沙场)",
+      "price_start": 98.62,
+      "price_end": 1002.5,
+      "change_percent": 916.5280876090043,
+      "volume_change": 0
+    },
+    {
+      "good_id": 3196,
+      "good_name": "法玛斯（StatTrak™） | 机械工业 (破损不堪)",
+      "price_start": 95,
+      "price_end": 885,
+      "change_percent": 831.578947368421,
+      "volume_change": 0
+    },
+    {
+      "good_id": 1977,
+      "good_name": "P90 | 暴风呼啸 (崭新出厂)",
+      "price_start": 114.99,
+      "price_end": 888.88,
+      "change_percent": 673.0063483781198,
+      "volume_change": 0
+    }
+  ],
+  "top_losers": [
+    {
+      "good_id": 465,
+      "good_name": "CZ75 | 毒镖 (略有磨损)",
+      "price_start": 180,
+      "price_end": 28.99,
+      "change_percent": -83.89444444444443,
+      "volume_change": 0
+    },
+    {
+      "good_id": 691,
+      "good_name": "双持贝瑞塔 | 报应 (久经沙场)",
+      "price_start": 288,
+      "price_end": 50,
+      "change_percent": -82.63888888888889,
+      "volume_change": 0
+    },
+    {
+      "good_id": 13805,
+      "good_name": "MAC-10（StatTrak™） | 玩具盒子 (战痕累累)",
+      "price_start": 287.5,
+      "price_end": 88,
+      "change_percent": -69.3913043478261,
+      "volume_change": 0
+    },
+    {
+      "good_id": 23947,
+      "good_name": "MP5-SD（StatTrak™） | 专注 (崭新出厂)",
+      "price_start": 55,
+      "price_end": 17,
+      "change_percent": -69.0909090909091,
+      "volume_change": 0
+    },
+    {
+      "good_id": 23977,
+      "good_name": "P2000（StatTrak™） | 红翼 (崭新出厂)",
+      "price_start": 60,
+      "price_end": 21.28,
+      "change_percent": -64.53333333333333,
+      "volume_change": 0
+    },
+    {
+      "good_id": 19448,
+      "good_name": "新星 | 绿苹果 (久经沙场)",
+      "price_start": 283.9,
+      "price_end": 111,
+      "change_percent": -60.90172595984501,
+      "volume_change": 0
+    },
+    {
+      "good_id": 464,
+      "good_name": "CZ75 | 毒镖 (崭新出厂)",
+      "price_start": 288,
+      "price_end": 119,
+      "change_percent": -58.68055555555556,
+      "volume_change": 0
+    },
+    {
+      "good_id": 24033,
+      "good_name": "格洛克 18 型 | 镜面马赛克 (战痕累累)",
+      "price_start": 89,
+      "price_end": 39.4,
+      "change_percent": -55.73033707865168,
+      "volume_change": 0
+    },
+    {
+      "good_id": 21671,
+      "good_name": "MP7 | 赭石短调 (崭新出厂)",
+      "price_start": 4.39,
+      "price_end": 1.99,
+      "change_percent": -54.669703872437346,
+      "volume_change": 0
+    },
+    {
+      "good_id": 2004,
+      "good_name": "PP-野牛 | 墨竹 (破损不堪)",
+      "price_start": 99.1,
+      "price_end": 45.6,
+      "change_percent": -53.98587285570131,
+      "volume_change": 0
+    }
+  ],
+  "recent_events": [
+    {
+      "date": "2025-10-01T00:00:00+08:00",
+      "event_type": "holiday",
+      "description": "十月一黄金周假期，市场流动性增加",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-05T08:00:00+08:00",
+      "event_type": "spike",
+      "description": "市场单日上涨6.07%",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-06T08:00:00+08:00",
+      "event_type": "spike",
+      "description": "市场单日上涨1336.25%",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-07T08:00:00+08:00",
+      "event_type": "crash",
+      "description": "市场单日下跌-39.98%",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-08T08:00:00+08:00",
+      "event_type": "crash",
+      "description": "市场单日下跌-88.11%",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-10T08:00:00+08:00",
+      "event_type": "spike",
+      "description": "市场单日上涨8.54%",
+      "impact": "high"
+    },
+    {
+      "date": "2025-10-13T08:00:00+08:00",
+      "event_type": "spike",
+      "description": "市场单日上涨48.62%",
+      "impact": "high"
+    }
+  ],
+  "history_compare": [],
+  "insights": [
+    "市场整体呈下跌趋势，趋势强度4.5%",
+    "市场波动率较高(387.41%)，存在较多交易机会但风险也较大",
+    "成交量环比增长42.8%，市场活跃度提升",
+    "可能的原因：节假日效应、新玩家入场、大额资本流入",
+    "十月一黄金周期间，国内玩家活跃度提升，带动市场交易量增加",
+    "假期效应通常会持续1-2周，随后市场会逐步回归常态",
+    "涨幅榜第一名：AUG | 代达罗斯之殇 (战痕累累)，涨幅2255960.91%"
+  ]
+}
