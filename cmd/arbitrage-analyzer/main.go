@@ -25,13 +25,15 @@ import (
 )
 
 var (
-	minProfitRate      = flag.Float64("min-profit", 0.08, "最小利润率 (默认 8%，优化后从5%提升)")
+	minProfitRate      = flag.Float64("min-profit", 0.12, "最小利润率 (默认 12%，提高利润要求)")
 	minDaysHistory     = flag.Int("min-days", 7, "最少历史天数（默认 3天，没有足够数据时按当前价差判断）")
 	budget             = flag.Float64("budget", 2000, "求购总预算（默认 2000元，可自定义）")
 	minSellCount       = flag.Int("min-sell-count", 150, "最少在售数量（默认 150件，从100提升以确保流动性）")
 	minBuyCount        = flag.Int("min-buy-count", 20, "最少求购数量（默认 20件，从10提升以确保需求）")
-	maxReasonablePrice = flag.Float64("max-price", 10000, "最高合理价格（默认 10000元，过滤异常价格）")
+	maxReasonablePrice = flag.Float64("max-price", 300, "最高合理价格（默认 300元，过滤异常价格）")
 	maxPriceSpread     = flag.Float64("max-spread", 2.0, "最大价差倍数（默认 2.0倍，售价不超过求购价的2倍）")
+	minPrice           = flag.Float64("min-price", 2, "最低价格（默认2元，低于此价格视为垃圾商品）")
+	maxQuantityPerItem = flag.Int("max-qty", 2, "每种饰品最多购买数量（默认2件，增加多样性）")
 	once               = flag.Bool("once", false, "只运行一次，不循环")
 	dbURL              = flag.String("db", "", "数据库连接字符串")
 	backtest           = flag.Bool("backtest", false, "回测模式：使用7天前的预测对比实际收益")
@@ -616,11 +618,14 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 	score += dataScore
 
 	// === 8. 价值投资指标（权重3%）===
-	// 低价格高流动性的"价值股"
-	if opp.CurrentBuyPrice < 100 && opp.SellOrderCount >= 150 {
-		score += 3.0 // 价值投资机会
-	} else if opp.CurrentBuyPrice < 50 && opp.SellOrderCount >= 100 {
+	// 绝对利润潜力：高价饰品即使利润率低，绝对利润也可观
+	absoluteProfit := opp.EstimatedProfit * float64(1) // 单件绝对利润
+	if absoluteProfit >= 50 {                          // 单件利润≥50元
+		score += 3.0
+	} else if absoluteProfit >= 20 { // 单件利润≥20元
 		score += 2.0
+	} else if absoluteProfit >= 10 { // 单件利润≥10元
+		score += 1.0
 	}
 
 	// === 8.5 热度评分（权重5%）⭐新增⭐===
@@ -698,14 +703,95 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 	return score
 }
 
-// calculateOptimalQuantity 计算最优购买数量（保守策略）
+// PurchaseItem 购买项
+type PurchaseItem struct {
+	GoodID   int64
+	GoodName string
+	Quantity int
+	Price    float64
+	Total    float64
+	Profit   float64 // 预期利润
+}
+
+// PurchasePlan 购买方案
+type PurchasePlan struct {
+	Items        []PurchaseItem
+	TotalCost    float64
+	TotalProfit  float64
+	TotalItems   int
+	ProfitRate   float64
+	StrategyName string
+}
+
+// generatePurchasePlan 根据给定的商品列表和预算生成购买方案
+func generatePurchasePlan(opportunities []models.ArbitrageOpportunity, budget float64, strategyName string) PurchasePlan {
+	plan := PurchasePlan{
+		Items:        []PurchaseItem{},
+		StrategyName: strategyName,
+	}
+
+	remainingBudget := budget
+
+	for i := range opportunities {
+		if remainingBudget <= 10 {
+			break
+		}
+
+		opp := &opportunities[i]
+		buyPrice := opp.RecommendedBuyPrice
+
+		// 计算购买数量
+		quantity := calculateOptimalQuantity(opp, remainingBudget, budget, i+1, len(opportunities))
+		if quantity == 0 {
+			continue
+		}
+
+		total := buyPrice * float64(quantity)
+		if total > remainingBudget {
+			continue
+		}
+
+		// 计算预期利润：(售价*0.99 - 买价) * 数量
+		profit := (opp.CurrentSellPrice*0.99 - buyPrice) * float64(quantity)
+
+		item := PurchaseItem{
+			GoodID:   opp.GoodID,
+			GoodName: opp.GoodName,
+			Quantity: quantity,
+			Price:    buyPrice,
+			Total:    total,
+			Profit:   profit,
+		}
+
+		plan.Items = append(plan.Items, item)
+		plan.TotalCost += total
+		plan.TotalProfit += profit
+		plan.TotalItems += quantity
+		remainingBudget -= total
+
+		// 限制最多100种商品
+		if len(plan.Items) >= 100 {
+			break
+		}
+	}
+
+	// 计算总体利润率
+	if plan.TotalCost > 0 {
+		plan.ProfitRate = plan.TotalProfit / plan.TotalCost
+	}
+
+	return plan
+}
+
+// calculateOptimalQuantity 计算最优购买数量（多样性优先策略）
 // 购买数量策略：
-// - 默认1个（保守策略）
-// - 只有在盈利非常多 OR 盈利几率很大 的情况下才增加到3个
+// - 默认1个（最大多样性）
+// - 只有在利润率特别高（>=18%）且低风险时才买2个
+// - 严格限制最大数量为 maxQuantityPerItem
 func calculateOptimalQuantity(opp *models.ArbitrageOpportunity, remainingBudget float64, totalBudget float64, currentRank int, totalOpportunities int) int {
 	buyPrice := opp.RecommendedBuyPrice
 
-	// === 基础逻辑：默认购买1个 ===
+	// === 基础逻辑：默认购买1个（多样性优先）===
 	quantity := 1
 
 	// === 检查预算是否允许 ===
@@ -718,39 +804,34 @@ func calculateOptimalQuantity(opp *models.ArbitrageOpportunity, remainingBudget 
 	}
 
 	// === 下跌趋势直接返回1个（最重要的风险因素） ===
-	// 如果售价在下跌，即使利润率再高也不应该加仓
 	if opp.PriceTrend == "down" {
 		return 1
 	}
 
-	// === 判断是否应该加仓到3个 ===
-	// 条件1：盈利非常多（利润率 >= 15%）
-	veryHighProfit := opp.ProfitRate >= 0.15
+	// === 高风险商品始终只买1个 ===
+	if opp.RiskLevel == "high" {
+		return 1
+	}
 
-	// 条件2：盈利几率很大（低风险 + 稳定或上涨趋势 + 充足历史数据）
-	highProbabilityProfit := opp.RiskLevel == "low" &&
+	// === 判断是否应该买2个（非常严格的条件）===
+	// 条件：利润率>=18% + 低风险 + 稳定或上涨趋势
+	shouldBuyTwo := opp.ProfitRate >= 0.18 &&
+		opp.RiskLevel == "low" &&
 		(opp.PriceTrend == "up" || opp.PriceTrend == "stable") &&
-		opp.DaysOfData >= 5 &&
-		opp.ProfitRate >= 0.08 // 至少8%的利润
+		opp.DaysOfData >= 5
 
-	// 条件3：流动性很好且利润合理（高买卖比 + 足够的在售数量 + 合理利润率）
-	goodLiquidityWithProfit := float64(opp.BuyOrderCount)/float64(opp.SellOrderCount+1) > 0.6 &&
-		opp.SellOrderCount >= 200 &&
-		opp.ProfitRate >= 0.10
+	if shouldBuyTwo && maxQuantity >= 2 {
+		quantity = 2
+	}
 
-	// 只有满足以上条件之一，且数量不超过预算时，才增加到3个
-	if (veryHighProfit || highProbabilityProfit || goodLiquidityWithProfit) && maxQuantity >= 3 {
-		quantity = 3
+	// === 严格限制：不超过配置的最大数量 ===
+	if quantity > *maxQuantityPerItem {
+		quantity = *maxQuantityPerItem
 	}
 
 	// === 检查预算限制 ===
 	if quantity > maxQuantity {
 		quantity = maxQuantity
-	}
-
-	// === 高风险商品始终只买1个 ===
-	if opp.RiskLevel == "high" {
-		quantity = 1
 	}
 
 	return quantity
@@ -1552,7 +1633,7 @@ func processOneGood(
 	// 基础价格检查
 	if currentBuyPrice <= 0 || currentSellPrice <= 0 ||
 		currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice ||
-		currentBuyPrice < 0.5 || currentSellPrice < 0.5 ||
+		currentBuyPrice < *minPrice || currentSellPrice < *minPrice ||
 		currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
 		resultChan <- result
 		return
@@ -1817,14 +1898,19 @@ func main() {
 
 	log.Printf("[套利分析器] 启动中...")
 	log.Printf("[套利分析器] 配置:")
-	log.Printf("  - 最小利润率: %.2f%%", *minProfitRate*100)
+	log.Printf("  - 最小利润率: %.2f%% ⬆️", *minProfitRate*100)
 	log.Printf("  - 求购预算: ¥%.2f", *budget)
+	log.Printf("  - 价格范围: ¥%.2f ~ ¥%.2f", *minPrice, *maxReasonablePrice)
 	log.Printf("  - 最少在售数量: %d件", *minSellCount)
 	log.Printf("  - 最少求购数量: %d件", *minBuyCount)
-	log.Printf("  - 最高合理价格: ¥%.2f", *maxReasonablePrice)
+	log.Printf("  - 每种饰品最多: %d件 🎯", *maxQuantityPerItem)
 	log.Printf("  - 最大价差倍数: %.1f倍", *maxPriceSpread)
 	log.Printf("  - 最少历史天数: %d天", *minDaysHistory)
 	log.Printf("  - 并发线程数: %d", *concurrency)
+	log.Printf("[多样性策略] 优先广度而非深度:")
+	log.Printf("  - 默认每种只买1件（最大化品种数量）")
+	log.Printf("  - 利润率≥18%% + 低风险时可买2件")
+	log.Printf("  - 严格限制: 每种最多%d件", *maxQuantityPerItem)
 	// ===== 新增：反弹参数说明 =====
 	log.Printf("[反弹控制] 追稳策略参数:")
 	log.Printf("  - 反弹恢复率下限: %.0f%%（必须恢复至少%.0f%%的跌幅）", *minRebound*100, *minRebound*100)
@@ -2686,17 +2772,77 @@ func runAnalysis(db *gorm.DB) {
 		return
 	}
 
-	// 按综合评分排序（利润率、风险、流动性、历史数据、价格趋势）
-	sort.Slice(opportunities, func(i, j int) bool {
-		scoreI := calculateScore(opportunities[i])
-		scoreJ := calculateScore(opportunities[j])
+	// 按价格区间分组，确保各价格段都有代表
+	priceRangeGroups := map[string][]models.ArbitrageOpportunity{
+		"0-10":    {},
+		"10-50":   {},
+		"50-100":  {},
+		"100-300": {},
+		"300-500": {},
+		"500+":    {},
+	}
 
-		// 如果评分相同，按利润率排序
-		if scoreI == scoreJ {
-			return opportunities[i].ProfitRate > opportunities[j].ProfitRate
+	for _, opp := range opportunities {
+		price := opp.CurrentBuyPrice
+		var rangeKey string
+		if price < 10 {
+			rangeKey = "0-10"
+		} else if price < 50 {
+			rangeKey = "10-50"
+		} else if price < 100 {
+			rangeKey = "50-100"
+		} else if price < 300 {
+			rangeKey = "100-300"
+		} else if price < 500 {
+			rangeKey = "300-500"
+		} else {
+			rangeKey = "500+"
 		}
-		return scoreI > scoreJ
-	})
+		priceRangeGroups[rangeKey] = append(priceRangeGroups[rangeKey], opp)
+	}
+
+	// 对每个价格区间内部按评分排序
+	for rangeKey := range priceRangeGroups {
+		sort.Slice(priceRangeGroups[rangeKey], func(i, j int) bool {
+			scoreI := calculateScore(priceRangeGroups[rangeKey][i])
+			scoreJ := calculateScore(priceRangeGroups[rangeKey][j])
+			if scoreI == scoreJ {
+				return priceRangeGroups[rangeKey][i].ProfitRate > priceRangeGroups[rangeKey][j].ProfitRate
+			}
+			return scoreI > scoreJ
+		})
+	}
+
+	// 重新组合：采用轮询策略，确保各价格段都有机会
+	rebalancedOpportunities := []models.ArbitrageOpportunity{}
+	rangeOrder := []string{"100-300", "300-500", "500+", "50-100", "10-50", "0-10"} // 优先高价
+	maxPerRound := 5                                                                // 每轮每个区间最多取5个
+
+	for round := 0; round < 20; round++ { // 最多20轮
+		addedThisRound := false
+		for _, rangeKey := range rangeOrder {
+			group := priceRangeGroups[rangeKey]
+			startIdx := round * maxPerRound
+			endIdx := startIdx + maxPerRound
+			if endIdx > len(group) {
+				endIdx = len(group)
+			}
+			if startIdx < len(group) {
+				rebalancedOpportunities = append(rebalancedOpportunities, group[startIdx:endIdx]...)
+				addedThisRound = true
+			}
+		}
+		if !addedThisRound {
+			break
+		}
+	}
+
+	opportunities = rebalancedOpportunities
+
+	log.Printf("[价格区间分布] 各价格段商品数量:")
+	for _, rangeKey := range rangeOrder {
+		log.Printf("  - %s元: %d个", rangeKey, len(priceRangeGroups[rangeKey]))
+	}
 
 	// 输出所有评分的商品（用于详细分析）
 	log.Printf("[套利分析] ==================== 量化评分详情 (共 %d 个) ====================", len(opportunities))
@@ -2777,9 +2923,74 @@ func runAnalysis(db *gorm.DB) {
 	log.Printf("==========================================================================")
 
 	log.Printf("[求购计划] 总预算: ¥%.2f", *budget)
+	log.Printf("[组合优化] 开始计算最优求购组合...")
 
-	remainingBudget := *budget
-	totalItems := 0
+	// ==================== 新增：组合优化算法 ====================
+	// 尝试多种策略，选择利润最大的组合
+
+	// 生成多个候选方案
+	plans := []PurchasePlan{}
+
+	// 方案1: 按评分排序（当前策略）
+	plan1 := generatePurchasePlan(opportunities, *budget, "按评分优先")
+	plans = append(plans, plan1)
+
+	// 方案2: 按利润率排序
+	sortedByProfitRate := make([]models.ArbitrageOpportunity, len(opportunities))
+	copy(sortedByProfitRate, opportunities)
+	sort.Slice(sortedByProfitRate, func(i, j int) bool {
+		return sortedByProfitRate[i].ProfitRate > sortedByProfitRate[j].ProfitRate
+	})
+	plan2 := generatePurchasePlan(sortedByProfitRate, *budget, "按利润率优先")
+	plans = append(plans, plan2)
+
+	// 方案3: 按绝对利润排序
+	sortedByAbsProfit := make([]models.ArbitrageOpportunity, len(opportunities))
+	copy(sortedByAbsProfit, opportunities)
+	sort.Slice(sortedByAbsProfit, func(i, j int) bool {
+		profitI := sortedByAbsProfit[i].EstimatedProfit
+		profitJ := sortedByAbsProfit[j].EstimatedProfit
+		return profitI > profitJ
+	})
+	plan3 := generatePurchasePlan(sortedByAbsProfit, *budget, "按绝对利润优先")
+	plans = append(plans, plan3)
+
+	// 方案4: 性价比优先（利润率 * 价格，倾向于高价高利润率）
+	sortedByValueRatio := make([]models.ArbitrageOpportunity, len(opportunities))
+	copy(sortedByValueRatio, opportunities)
+	sort.Slice(sortedByValueRatio, func(i, j int) bool {
+		valueI := sortedByValueRatio[i].ProfitRate * sortedByValueRatio[i].CurrentBuyPrice
+		valueJ := sortedByValueRatio[j].ProfitRate * sortedByValueRatio[j].CurrentBuyPrice
+		return valueI > valueJ
+	})
+	plan4 := generatePurchasePlan(sortedByValueRatio, *budget, "按性价比优先")
+	plans = append(plans, plan4)
+
+	// 输出所有方案对比
+	log.Printf("[方案对比] ==================== 共生成 %d 个方案 ====================", len(plans))
+	for i, plan := range plans {
+		log.Printf("[方案%d] %s:", i+1, plan.StrategyName)
+		log.Printf("  - 总成本: ¥%.2f", plan.TotalCost)
+		log.Printf("  - 预期利润: ¥%.2f", plan.TotalProfit)
+		log.Printf("  - 利润率: %.2f%%", plan.ProfitRate*100)
+		log.Printf("  - 商品种类: %d种", len(plan.Items))
+		log.Printf("  - 总件数: %d件", plan.TotalItems)
+	}
+
+	// 选择利润最大的方案
+	bestPlan := plans[0]
+	bestPlanIndex := 0
+	for i, plan := range plans {
+		if plan.TotalProfit > bestPlan.TotalProfit {
+			bestPlan = plan
+			bestPlanIndex = i
+		}
+	}
+
+	log.Printf("[最优方案] ✅ 方案%d（%s）利润最高: ¥%.2f", bestPlanIndex+1, bestPlan.StrategyName, bestPlan.TotalProfit)
+	log.Printf("==========================================================================")
+
+	// 使用最优方案
 	purchaseList := []struct {
 		GoodID   int64
 		GoodName string
@@ -2788,28 +2999,7 @@ func runAnalysis(db *gorm.DB) {
 		Total    float64
 	}{}
 
-	// 使用优化的贪心算法分配预算：优先选择性价比最高的商品
-	totalBudget := *budget
-	for i := range opportunities {
-		if remainingBudget <= 10 { // 剩余预算太少则停止
-			break
-		}
-
-		opp := &opportunities[i]
-		buyPrice := opp.RecommendedBuyPrice
-
-		// 智能计算购买数量（传入总预算、当前排名、总机会数）
-		quantity := calculateOptimalQuantity(opp, remainingBudget, totalBudget, i+1, len(opportunities))
-		if quantity == 0 {
-			continue
-		}
-
-		// 更新记录
-		opp.RecommendedQuantity = quantity
-		total := buyPrice * float64(quantity)
-		remainingBudget -= total
-		totalItems += quantity
-
+	for _, item := range bestPlan.Items {
 		purchaseList = append(purchaseList, struct {
 			GoodID   int64
 			GoodName string
@@ -2817,25 +3007,28 @@ func runAnalysis(db *gorm.DB) {
 			Price    float64
 			Total    float64
 		}{
-			GoodID:   opp.GoodID,
-			GoodName: opp.GoodName,
-			Quantity: quantity,
-			Price:    buyPrice,
-			Total:    total,
+			GoodID:   item.GoodID,
+			GoodName: item.GoodName,
+			Quantity: item.Quantity,
+			Price:    item.Price,
+			Total:    item.Total,
 		})
 
-		// 扩大购买清单长度限制（从50提高到100），确保更好地利用预算
-		if len(purchaseList) >= 100 {
-			break
+		// 同时更新opportunities中的推荐数量
+		for i := range opportunities {
+			if opportunities[i].GoodID == item.GoodID {
+				opportunities[i].RecommendedQuantity = item.Quantity
+				break
+			}
 		}
 	}
 
-	// 预算利用率统计（不再进行第二轮分配，避免超过5件上限）
-	budgetUtilization := (totalBudget - remainingBudget) / totalBudget
-	log.Printf("[预算优化] 预算使用率: %.1f%% (为控制风险，每件饰品最多5件)", budgetUtilization*100)
-
+	totalBudget := *budget
+	totalItems := bestPlan.TotalItems
+	budgetUtilization := bestPlan.TotalCost / totalBudget
+	log.Printf("[预算优化] 预算使用率: %.1f%%", budgetUtilization*100)
 	log.Printf("[求购计划] 已分配: ¥%.2f / ¥%.2f (剩余: ¥%.2f)",
-		*budget-remainingBudget, *budget, remainingBudget)
+		bestPlan.TotalCost, *budget, *budget-bestPlan.TotalCost)
 	log.Printf("[求购计划] 共计划求购 %d 个饰品，总计 %d 件", len(purchaseList), totalItems)
 
 	// 保存所有套利机会到数据库（不只是前50个）
@@ -2887,7 +3080,7 @@ func runAnalysis(db *gorm.DB) {
 
 	// 创建最优求购计划（清单）
 	if len(purchaseList) > 0 {
-		totalCost := *budget - remainingBudget
+		totalCost := bestPlan.TotalCost
 		plan := models.PurchasePlan{
 			Budget:     *budget,
 			TotalItems: totalItems,
