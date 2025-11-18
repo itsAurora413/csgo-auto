@@ -187,12 +187,35 @@ func NewClientWithTokenAndProxy(token string, proxyURL string, timeout time.Dura
 		useOpenAPI:  false,
 	}
 
-	// 获取用户信息验证token，使用带超时的 context
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	userInfo, err := client.getUserInfo(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("悠悠有品账号登录失败: %w", err)
+	// 获取用户信息验证token，使用带超时的 context，带重试机制
+	maxRetries := 3
+	retryDelay := 2 * time.Second
+	var userInfo *UserInfo
+	var err error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		userInfo, err = client.getUserInfo(ctx)
+		cancel()
+
+		if err == nil {
+			break
+		}
+
+		// 检查是否是网络错误（EOF、超时等），需要重试
+		errStr := err.Error()
+		isRetryable := strings.Contains(errStr, "EOF") ||
+			strings.Contains(errStr, "timeout") ||
+			strings.Contains(errStr, "deadline exceeded") ||
+			strings.Contains(errStr, "connection reset") ||
+			strings.Contains(errStr, "connection refused")
+
+		if !isRetryable || attempt == maxRetries {
+			return nil, fmt.Errorf("悠悠有品账号登录失败: %w", err)
+		}
+
+		// 等待后重试
+		time.Sleep(retryDelay * time.Duration(attempt))
 	}
 
 	// 处理UserId的类型转换
