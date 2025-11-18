@@ -24,7 +24,7 @@ var (
 	logFile       = flag.String("log", "", "日志文件路径")
 	once          = flag.Bool("once", false, "只运行一次，不循环")
 	// 代理相关参数（硬编码默认值）
-	useProxy     = flag.Bool("use-proxy", true, "是否使用代理（默认启用）")
+	useProxy     = flag.Bool("use-proxy", false, "是否使用代理")
 	proxyURL     = flag.String("proxy-url", "hk.novproxy.io:1000", "代理服务器地址")
 	proxyUser    = flag.String("proxy-user", "xkuq4621-region-US", "代理用户名")
 	proxyPass    = flag.String("proxy-pass", "58hb6rzr", "代理密码")
@@ -37,7 +37,7 @@ var (
 const (
 	// 悠悠有品 Token（必需）
 	// 替换为您的实际 Token
-	YouPinToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5MWM3ZDUyOWIwMzk0NGRiOTFlMDllYjNmMDUzMzgxZiIsIm5hbWVpZCI6IjE2NDUyMzEiLCJJZCI6IjE2NDUyMzEiLCJ1bmlxdWVfbmFtZSI6IllQMDAwMTY0NTIzMSIsIk5hbWUiOiJZUDAwMDE2NDUyMzEiLCJ2ZXJzaW9uIjoickdaIiwibmJmIjoxNzYxODI5NTE2LCJleHAiOjE3NjI2OTM1MTYsImlzcyI6InlvdXBpbjg5OC5jb20iLCJkZXZpY2VJZCI6ImU3ZGYzOWQ1LTEzZjYtNDZmMS1hNDI0LTFmZDU5YjU4NTk4OCIsImF1ZCI6InVzZXIifQ.x0jZzw6RCNcpyzA8CrB5MIJFYVzpDrKBvfmnYZVrvng"
+	YouPinToken = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5Y2IyNjJkYWFlMDE0NjdkOWRkOTdkZDY2NGVmZjhmMiIsIm5hbWVpZCI6IjE2NDUyMzEiLCJJZCI6IjE2NDUyMzEiLCJ1bmlxdWVfbmFtZSI6IllQMDAwMTY0NTIzMSIsIk5hbWUiOiJZUDAwMDE2NDUyMzEiLCJ2ZXJzaW9uIjoiSTFqIiwibmJmIjoxNzYyODI3NDg3LCJleHAiOjE3NjM2OTE0ODcsImlzcyI6InlvdXBpbjg5OC5jb20iLCJkZXZpY2VJZCI6ImU3ZGYzOWQ1LTEzZjYtNDZmMS1hNDI0LTFmZDU5YjU4NTk4OCIsImF1ZCI6InVzZXIifQ.CRb9VDDtCVvJBlvzLjqTWxYH_A7hBxt8mBluB00WiRE"
 
 	// OpenAPI 配置
 	OpenAPIAppKey = "1645231"
@@ -121,9 +121,6 @@ func main() {
 	// ===== 获取认证配置 =====
 	// 优先级：命令行参数 > 环境变量 > 硬编码配置
 
-	// 获取 Token
-	currentToken := *token
-
 	// 获取数据库连接字符串
 	currentDBURL := *dbURL
 	if currentDBURL == "" {
@@ -161,18 +158,11 @@ func main() {
 		logger.Printf("✓ 悠悠有品客户端初始化成功（使用代理）")
 	} else {
 		// 不使用代理初始化
-		client, err = youpin.NewClientWithToken(currentToken)
+		openAPIClient, err = youpin.NewOpenAPIClientWithDefaultKeysAndToken(YouPinToken)
 		if err != nil {
 			logger.Fatalf("初始化悠悠有品客户端失败: %v", err)
 		}
 		logger.Printf("✓ 悠悠有品客户端初始化成功")
-
-		// 初始化 OpenAPI 客户端（不使用代理）
-		openAPIClient, err = youpin.NewOpenAPIClientWithDefaultKeysAndToken(currentToken)
-		if err != nil {
-			logger.Fatalf("初始化 OpenAPI 客户端失败: %v", err)
-		}
-		logger.Printf("✓ OpenAPI 客户端初始化成功")
 	}
 
 	// 初始化数据库

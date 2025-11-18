@@ -1,0 +1,15 @@
+{
+  "config": {
+    "device_id": "e944206c-0e66-4492-9913-eea28f739a00",
+    "device_token": "aNbW21QU7cUDAJB4bK22q1rk",
+    "language": "zh-CN",
+    "screen": {
+      "height": 2560,
+      "width": 1440
+    },
+    "timezone": ""
+  },
+  "generated_at": "2025-11-18T10:16:45+08:00",
+  "method": "complete_with_encryption",
+  "uk": "f429b10d8a9e08a968a7fd01e8c5c822e687da5b2808e68fa2b15ba8bb838d3b"
+}
