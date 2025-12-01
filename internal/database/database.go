@@ -17,7 +17,7 @@ func Initialize(databaseURL string) (*gorm.DB, error) {
 	var dsn string
 	if databaseURL == "" || databaseURL == "csgo_trader.db" {
 		// Default MySQL connection
-		dsn = "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
+		dsn = "root:Wyj250413.@tcp(192.3.81.194:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
 	} else {
 		dsn = databaseURL
 	}

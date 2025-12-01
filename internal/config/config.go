@@ -21,7 +21,7 @@ type Config struct {
 
 func Load() *Config {
 	// Default MySQL connection string
-	defaultDSN := "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
+	defaultDSN := "root:Wyj250413.@tcp(192.3.81.194:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
 
 	// 判断是否使用开放平台API
 	useOpenAPI := getEnv("YOUPIN_USE_OPEN_API", "false") == "true"

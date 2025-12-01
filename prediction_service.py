@@ -490,7 +490,7 @@ if __name__ == '__main__':
     import sys
 
     # 命令行参数支持
-    port = 5000
+    port = 5001
     for arg in sys.argv[1:]:
         if arg.startswith('--port='):
             port = int(arg.split('=')[1])

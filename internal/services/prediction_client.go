@@ -44,7 +44,7 @@ func NewPredictionClient(baseURL string) *PredictionClient {
 	return &PredictionClient{
 		baseURL: baseURL,
 		httpClient: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 300 * time.Second, // 300秒(5分钟)超时，足以应对小批量预测
 		},
 		cache:    make(map[int64]*PredictionResult),
 		cacheTTL: 1 * time.Hour,

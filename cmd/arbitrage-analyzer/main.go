@@ -4,6 +4,7 @@ import (
 	"context"
 	"csgo-trader/internal/database"
 	"csgo-trader/internal/models"
+	"csgo-trader/internal/services"
 	"csgo-trader/internal/services/youpin"
 	"flag"
 	"fmt"
@@ -25,11 +26,11 @@ import (
 )
 
 var (
-	minProfitRate      = flag.Float64("min-profit", 0.12, "最小利润率 (默认 12%，提高利润要求)")
+	minProfitRate      = flag.Float64("min-profit", 0.08, "最小利润率 (默认 8%，提高利润要求)")
 	minDaysHistory     = flag.Int("min-days", 7, "最少历史天数（默认 3天，没有足够数据时按当前价差判断）")
 	budget             = flag.Float64("budget", 2000, "求购总预算（默认 2000元，可自定义）")
-	minSellCount       = flag.Int("min-sell-count", 150, "最少在售数量（默认 150件，从100提升以确保流动性）")
-	minBuyCount        = flag.Int("min-buy-count", 20, "最少求购数量（默认 20件，从10提升以确保需求）")
+	minSellCount       = flag.Int("min-sell-count", 90, "最少在售数量（默认 50件，阶段0已过滤>=100，这里放宽以不重复过滤）")
+	minBuyCount        = flag.Int("min-buy-count", 5, "最少求购数量（默认 10件，放宽标准）")
 	maxReasonablePrice = flag.Float64("max-price", 300, "最高合理价格（默认 300元，过滤异常价格）")
 	maxPriceSpread     = flag.Float64("max-spread", 2.0, "最大价差倍数（默认 2.0倍，售价不超过求购价的2倍）")
 	minPrice           = flag.Float64("min-price", 2, "最低价格（默认2元，低于此价格视为垃圾商品）")
@@ -47,6 +48,10 @@ var (
 	maxRebound           = flag.Float64("max-rebound", 0.80, "反弹恢复率上限（默认80%：反弹不能超过跌幅的80%，防止追涨）")
 	maxAbsoluteRebound1d = flag.Float64("max-rebound-1d", 0.05, "单日反弹幅度上限（默认5%：一天内反弹不超过5%，防止高位接盘）")
 	minAbsoluteRebound   = flag.Float64("min-rebound-abs", 0.03, "反弹绝对幅度下限（默认3%：最少要反弹3%，从2%提升）")
+
+	proxyURL  = flag.String("proxy-url", "hk.novproxy.io:1000", "代理服务器地址")
+	proxyUser = flag.String("proxy-user", "qg3e2819-region-US", "代理用户名")
+	proxyPass = flag.String("proxy-pass", "mahey33h", "代理密码")
 )
 
 // BlacklistCache 黑名单缓存（template_id -> 商品名称）
@@ -1583,12 +1588,14 @@ func processOneGood(
 		strings.Contains(lowerName, "pass") ||
 		hasGuajian ||
 		hasJinianpin {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 类型不符 (非枪械饰品)", goodID, name)
 		resultChan <- result
 		return
 	}
 
 	// 黑名单检查
 	if isBlacklisted(goodID, db) {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 黑名单商品", goodID, name)
 		resultChan <- result
 		return
 	}
@@ -1599,6 +1606,7 @@ func processOneGood(
 	if err := db.Where("good_id = ? AND created_at >= ?", goodID, sevenDaysAgo).
 		Order("created_at DESC").
 		Find(&historicalSnapshots).Error; err != nil || len(historicalSnapshots) == 0 {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无历史数据 (过去7天)", goodID, name)
 		resultChan <- result
 		return
 	}
@@ -1617,12 +1625,14 @@ func processOneGood(
 	} else {
 		// 回退快照
 		if len(historicalSnapshots) == 0 {
+			log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无有效价格数据", goodID, name)
 			resultChan <- result
 			return
 		}
 		latestSnapshot := historicalSnapshots[0]
 		if latestSnapshot.YYYPBuyPrice == nil || latestSnapshot.YYYPSellPrice == nil ||
 			*latestSnapshot.YYYPBuyPrice <= 0 || *latestSnapshot.YYYPSellPrice <= 0 {
+			log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 快照价格无效", goodID, name)
 			resultChan <- result
 			return
 		}
@@ -1635,6 +1645,7 @@ func processOneGood(
 		currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice ||
 		currentBuyPrice < *minPrice || currentSellPrice < *minPrice ||
 		currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 价格异常 (买:%.2f, 卖:%.2f)", goodID, name, currentBuyPrice, currentSellPrice)
 		resultChan <- result
 		return
 	}
@@ -1643,6 +1654,7 @@ func processOneGood(
 	feeRate := 0.01
 	netSellPrice := currentSellPrice * (1 - feeRate)
 	if netSellPrice <= currentBuyPrice {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无套利空间 (净卖价:%.2f <= 买价:%.2f)", goodID, name, netSellPrice, currentBuyPrice)
 		resultChan <- result
 		return
 	}
@@ -1665,12 +1677,15 @@ func processOneGood(
 		}
 	} else {
 		// 没有真实的在售数量就不推荐
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无有效在售数量", goodID, name)
 		resultChan <- result
 		return
 	}
 
 	// 流动性检查
 	if sellOrderCount < *minSellCount || buyOrderCount < *minBuyCount {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 流动性不足 (在售:%d<%d, 求购:%d<%d)",
+			goodID, name, sellOrderCount, *minSellCount, buyOrderCount, *minBuyCount)
 		resultChan <- result
 		return
 	}
@@ -1704,9 +1719,15 @@ func processOneGood(
 	profitRate := estimatedProfit / currentBuyPrice
 
 	if profitRate < *minProfitRate {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 利润率不足 (%.2f%% < %.2f%%)",
+			goodID, name, profitRate*100, *minProfitRate*100)
 		resultChan <- result
 		return
 	}
+
+	// 通过了所有检查
+	log.Printf("[第一阶段] ✓ ID=%d, 名称=%s, 通过所有检查 (在售:%d, 求购:%d, 买价:%.2f, 卖价:%.2f, 利润率:%.2f%%)",
+		goodID, name, sellOrderCount, buyOrderCount, currentBuyPrice, currentSellPrice, profitRate*100)
 
 	// === 抄底策略检查（第一阶段）===
 	// 在第一阶段就识别底部反弹特征，避免遗漏抄底机会
@@ -1945,26 +1966,36 @@ func main() {
 		log.Fatalf("[套利分析器] 表迁移失败: %v", err)
 	}
 
+	// 初始化预测客户端
+	predictionClient := services.NewPredictionClient("http://localhost:5000")
+	ok, err := predictionClient.Health()
+	if !ok || err != nil {
+		log.Printf("[套利分析器] ⚠️ 预测服务不可用: %v，将继续使用传统分析方法", err)
+	} else {
+		log.Printf("[套利分析器] ✓ 预测服务连接成功，已启用集成预测模型")
+	}
+
 	if *backtest {
 		// 回测模式
 		runBacktest(db)
 	} else if *once {
 		// 只运行一次
-		runAnalysis(db)
+		runAnalysis(db, predictionClient)
 	} else {
 		// 持续循环运行：每次运行完立即开始下一次
 		for {
-			runAnalysis(db)
+			runAnalysis(db, predictionClient)
 			log.Printf("[套利分析器] 本轮分析完成，立即开始下一轮分析...")
 		}
 	}
 }
 
-func runAnalysis(db *gorm.DB) {
+func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 	startTime := time.Now()
 	analysisTime := startTime
 	log.Printf("[套利分析] ==================== 开始新一轮分析 ====================")
 	log.Printf("[套利分析] 分析时间: %s", analysisTime.Format("2006-01-02 15:04:05"))
+	log.Printf("[套利分析] 分析方法: 集成预测模型 (Prophet + XGBoost + LinearRegression)")
 
 	// === 市场风险检测（自适应策略） ===
 	marketRisk := DetectMarketRisk(db)
@@ -1987,7 +2018,8 @@ func runAnalysis(db *gorm.DB) {
 
 		// 如果有Token，使用带Token的OpenAPI客户端；否则只使用OpenAPI认证（求购查询会失败，但可进行价格验证）
 		if accountToken != "" {
-			if c, err := youpin.NewOpenAPIClientWithDefaultKeysAndToken(accountToken); err == nil {
+			proxyURLWithAuth := fmt.Sprintf("http://%s:%s@%s", *proxyUser, *proxyPass, *proxyURL)
+			if c, err := youpin.NewOpenAPIClientWithDefaultKeysAndTokenAndProxy(accountToken, proxyURLWithAuth, time.Duration(100*time.Second)); err == nil {
 				ypClient = c
 				log.Printf("[套利分析] YouPin OpenAPI客户端初始化成功（OpenAPI + Token双认证）")
 			} else {
@@ -2035,10 +2067,28 @@ func runAnalysis(db *gorm.DB) {
 	}
 	log.Printf("[套利分析] 商品信息加载完成，共 %d 个商品", len(goodsCache))
 
-	// 顺序模式：不预抓取，直接在第一阶段内按商品顺序获取实时价
+	// === 阶段0：历史数据预测过滤 ===
+	// 使用历史数据快速预测，过滤出有潜力的商品，避免浪费时间在无机会的商品上
+	log.Printf("[套利分析] ==================== 阶段0：历史数据预测过滤 ====================")
+	filteredGoodIDs, filterStats := filterByHistoricalPrediction(goodIDs, goodsCache, predictionClient)
+	log.Printf("[套利分析] 阶段0 统计: 总计 %d → 筛选后 %d (保留率 %.1f%%)",
+		filterStats["total"], len(filteredGoodIDs), float64(len(filteredGoodIDs))/float64(filterStats["total"])*100)
 
-	// 第一阶段：收集所有符合条件的商品数据（并发）
-	log.Printf("[套利分析] ==================== 第一阶段：筛选符合条件的商品（并发 %d 线程） ====================", *concurrency)
+	// 打印过滤通过的饰品信息
+	if len(filteredGoodIDs) > 0 {
+		log.Printf("[套利分析] ==================== 阶段0 通过的 %d 个饰品 ====================", len(filteredGoodIDs))
+		for i, goodID := range filteredGoodIDs {
+			if good, exists := goodsCache[goodID]; exists {
+				log.Printf("[通过饰品 %d/%d] ID=%d, 名称=%s", i+1, len(filteredGoodIDs), goodID, good.Name)
+			} else {
+				log.Printf("[通过饰品 %d/%d] ID=%d (缓存中不存在)", i+1, len(filteredGoodIDs), goodID)
+			}
+		}
+		log.Printf("[套利分析] ==================== 阶段0 通过饰品列表结束 ====================")
+	}
+
+	// === 第一阶段：仅对筛选后的商品获取最新价格 ===
+	log.Printf("[套利分析] ==================== 第一阶段：获取筛选商品的最新价格（并发 %d 线程） ====================", *concurrency)
 
 	phaseStartTime := time.Now()
 	var candidateItems []struct {
@@ -2055,11 +2105,40 @@ func runAnalysis(db *gorm.DB) {
 		historicalSnapshots []models.CSQAQGoodSnapshot
 	}
 
-	// 使用并发处理
-	candidateItems = processGoodsInParallel(db, ypClient, goodIDs, goodsCache, *concurrency)
+	// 使用并发处理（仅处理筛选后的商品）
+	candidateItems = processGoodsInParallel(db, ypClient, filteredGoodIDs, goodsCache, *concurrency)
 
 	log.Printf("[套利分析] 第一阶段耗时: %.2f 秒，筛选完成! 候选项: %d 个",
 		time.Since(phaseStartTime).Seconds(), len(candidateItems))
+
+	// === 第二阶段：使用最新价格重新预测（分批并发） ===
+	log.Printf("[套利分析] ==================== 第二阶段：基于最新价格的分批并发预测 ====================")
+	phaseStartTime = time.Now()
+
+	// 提取候选商品的ID列表用于二次预测
+	goodIDsForFinalPrediction := make([]int64, 0, len(candidateItems))
+	for _, candidate := range candidateItems {
+		goodIDsForFinalPrediction = append(goodIDsForFinalPrediction, candidate.good.GoodID)
+	}
+
+	if len(goodIDsForFinalPrediction) == 0 {
+		log.Printf("[套利分析] 没有符合条件的商品，分析结束")
+		return
+	}
+
+	log.Printf("[二次预测] 开始对 %d 个候选商品进行二次预测（基于最新价格）...", len(goodIDsForFinalPrediction))
+
+	// 使用小批量预测 + 高并发的方式（每批10个，20个线程，避免超时）
+	predictions, successCount, errorCount := smallBatchPredictWithConcurrency(
+		goodIDsForFinalPrediction,
+		10, // 每批10个商品
+		20, // 20个并发线程
+		predictionClient,
+		7,
+	)
+
+	log.Printf("[二次预测] 完成! 总计 %d，成功 %d，失败 %d，耗时: %.2f 秒",
+		len(goodIDsForFinalPrediction), successCount, errorCount, time.Since(phaseStartTime).Seconds())
 
 	// 以下代码为了兼容性保留，但不再使用原循环
 	processedCount := len(goodIDs)
@@ -2351,27 +2430,24 @@ func runAnalysis(db *gorm.DB) {
 		processedCount, len(candidateItems), skippedCount)
 	log.Printf("[第一阶段] 数据来源: 真实数据 %d 个, 估算数据 %d 个", realDataCount, estimatedDataCount)
 
-	// 第二阶段：对所有候选商品进行详细分析和评分
-	log.Printf("[套利分析] ==================== 第二阶段：计算套利机会和风险评估 ====================")
+	// === 第三阶段：使用最新预测结果进行分析和评分 ===
+	log.Printf("[套利分析] ==================== 第三阶段：最终分析与决策 ====================")
 	var opportunities []models.ArbitrageOpportunity
 
-	// 第二阶段过滤统计
-	secondStageFiltered := 0
-	multiPeriodWeakFiltered := 0
-
-	if *onlyBottomRebound {
-		log.Printf("[抄底模式] 🟢 仅抄底模式已激活: 只保留 \"7天跌幅≥5%% + 1-3天内反弹\" 的饰品")
-	}
+	// 统计
+	predictionCount := 0
+	skipCount := 0
 
 	for i, candidate := range candidateItems {
-		if i%100 == 0 && i > 0 {
-			log.Printf("[第二阶段] 进度: %d/%d (%.1f%%)",
+		if i%50 == 0 && i > 0 {
+			log.Printf("[第三阶段] 进度: %d/%d (%.1f%%)",
 				i, len(candidateItems), float64(i)/float64(len(candidateItems))*100)
 		}
 
 		currentBuyPrice := candidate.currentBuyPrice
 		currentSellPrice := candidate.currentSellPrice
 		historicalSnapshots := candidate.historicalSnapshots
+		goodID := candidate.good.GoodID
 
 		// 重新计算利润率
 		var feeRate2 float64 = 0.01
@@ -2379,7 +2455,31 @@ func runAnalysis(db *gorm.DB) {
 		estimatedProfit := netSellPrice2 - currentBuyPrice
 		profitRate := estimatedProfit / currentBuyPrice
 
-		// === 第二阶段：严格的二次验证 ===
+		// === 集成预测模型分析 ===
+		// 获取该商品的预测结果
+		prediction, hasPrediction := predictions[goodID]
+		var forecastedPrice7d float64
+		var predictionConfidence float64
+
+		if hasPrediction && prediction != nil {
+			// 有预测结果
+			if ensemble, err := prediction.GetEnsembleForecast(); err == nil && len(ensemble) >= 7 {
+				forecastedPrice7d = ensemble[6] // 第7天的预测价格
+				if rec, err := prediction.GetRecommendation(); err == nil {
+					predictionConfidence = rec.Confidence
+				}
+			}
+		}
+
+		// 如果有预测且预测未来价格会下跌，则跳过
+		if hasPrediction && forecastedPrice7d > 0 && forecastedPrice7d < currentBuyPrice {
+			log.Printf("[跳过] ID:%d 名称:%s | 预测价格下跌: 当前%.2f -> 7天后%.2f",
+				goodID, candidate.good.Name, currentBuyPrice, forecastedPrice7d)
+			skipCount++
+			continue
+		}
+
+		// === 第二阶段：基础有效性检查 ===
 
 		// 价格上限检查
 		if currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice {
@@ -2391,7 +2491,7 @@ func runAnalysis(db *gorm.DB) {
 			continue
 		}
 
-		// 价差合理性检查（更严格）
+		// 价差合理性检查
 		if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
 			continue
 		}
@@ -2401,233 +2501,37 @@ func runAnalysis(db *gorm.DB) {
 			continue
 		}
 
-		// === 分析价格趋势（使用线性回归）===
+		// === 使用预测模型确定价格趋势 ===
 		priceTrend := "unknown"
-
-		if candidate.hasEnoughHistory && len(historicalSnapshots) >= 3 {
-			// 收集求购价和售价的历史数据（按时间从旧到新排序）
-			buyPrices := []float64{}
+		if hasPrediction && forecastedPrice7d > 0 {
+			// 基于预测价格判断趋势
+			priceDiff := (forecastedPrice7d - currentBuyPrice) / currentBuyPrice
+			if priceDiff > 0.05 { // 预测上涨5%以上
+				priceTrend = "up"
+			} else if priceDiff < -0.05 { // 预测下跌5%以上
+				priceTrend = "down"
+			} else { // 预测变化在±5%以内
+				priceTrend = "stable"
+			}
+		} else if candidate.hasEnoughHistory && len(historicalSnapshots) >= 3 {
+			// 备用方案：使用历史数据的线性回归
 			sellPrices := []float64{}
-
 			for _, snapshot := range historicalSnapshots {
-				if snapshot.YYYPBuyPrice != nil && *snapshot.YYYPBuyPrice > 0 {
-					buyPrices = append(buyPrices, *snapshot.YYYPBuyPrice)
-				}
 				if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
 					sellPrices = append(sellPrices, *snapshot.YYYPSellPrice)
 				}
 			}
-
-			// 使用线性回归综合分析趋势
-			if len(sellPrices) >= 3 || len(buyPrices) >= 3 {
-				priceTrend, _ = analyzeTrendWithBothPrices(buyPrices, sellPrices)
-			}
-		} else {
-			// 历史数据不足时，根据当前价差判断稳定性
-			priceDiff := currentSellPrice - currentBuyPrice
-			diffRatio := priceDiff / currentBuyPrice
-			if diffRatio < 0.15 { // 价差小于15%认为相对稳定
-				priceTrend = "stable"
+			if len(sellPrices) >= 3 {
+				priceTrend, _, _ = calculateTrendByLinearRegression(sellPrices)
 			}
 		}
 
-		// === 短期操作：多周期涨跌幅检查（过滤多周期走弱的商品）===
-		// 计算1天、7天、30天的涨跌幅
-		if len(historicalSnapshots) >= 2 {
-			// 获取最新价格和历史价格
-			latestPrice := currentSellPrice
-
-			// 1天前价格（假设每1.6秒采样一次，1天约54000次采样，取最近第54次）
-			var price1d, price2d, price3d, price7d, price30d float64
-			var has1d, has2d, has3d, has7d, has30d bool
-
-			// 简化：直接从历史快照中取对应时间点
-			now := time.Now()
-			for _, snapshot := range historicalSnapshots {
-				if snapshot.YYYPSellPrice != nil && *snapshot.YYYPSellPrice > 0 {
-					age := now.Sub(snapshot.CreatedAt)
-
-					// 1天前的价格（23-25小时）
-					if age >= 23*time.Hour && age <= 25*time.Hour && !has1d {
-						price1d = *snapshot.YYYPSellPrice
-						has1d = true
-					}
-
-					// 2天前的价格（47-49小时）
-					if age >= 47*time.Hour && age <= 49*time.Hour && !has2d {
-						price2d = *snapshot.YYYPSellPrice
-						has2d = true
-					}
-
-					// 3天前的价格（71-73小时）
-					if age >= 71*time.Hour && age <= 73*time.Hour && !has3d {
-						price3d = *snapshot.YYYPSellPrice
-						has3d = true
-					}
-
-					// 7天前的价格（6.5-7.5天）
-					if age >= 156*time.Hour && age <= 180*time.Hour && !has7d {
-						price7d = *snapshot.YYYPSellPrice
-						has7d = true
-					}
-
-					// 30天前的价格（28-32天）
-					if age >= 672*time.Hour && age <= 768*time.Hour && !has30d {
-						price30d = *snapshot.YYYPSellPrice
-						has30d = true
-					}
-				}
-			}
-
-			// 计算涨跌幅
-			var rate1d, rate2d, rate3d, rate7d, rate30d float64
-			_ = rate2d  // 可能未使用，但保留作为完整的多周期分析框架
-			_ = rate3d  // 可能未使用
-			_ = rate30d // 30天涨跌幅在当前版本未使用，但保留框架
-			if has1d && price1d > 0 {
-				rate1d = (latestPrice - price1d) / price1d
-			}
-			if has2d && price2d > 0 {
-				rate2d = (latestPrice - price2d) / price2d
-			}
-			if has3d && price3d > 0 {
-				rate3d = (latestPrice - price3d) / price3d
-			}
-			if has7d && price7d > 0 {
-				rate7d = (latestPrice - price7d) / price7d
-			}
-			if has30d && price30d > 0 {
-				_ = (latestPrice - price30d) / price30d // 30天涨跌幅计算但可能未在当前版本使用
-			}
-
-			// 短期操作策略：改为抄底策略而不是追涨
-			// 黄金买点：前期下跌（7天/30天），当前反弹（1-3天内）
-			// 要避免的：连续上涨（1天↑ + 7天↑）= 高位接盘
-			// 反弹必须及时（1-3天内），超过3天就要错失时机
-
-			// ===== 抄底模式过滤（如果启用了仅抄底模式）=====
-			if *onlyBottomRebound {
-				// 抄底模式：只保留真正的底部反弹信号
-				// 要求：3-7天下跌足够深（-5%以上） + 1-3天内有有力反弹
-
-				// 灵活周期检查：3天、4天、5天、6天、7天中的任何一个满足下跌条件
-				hasValidDecline := false
-				var declineRate float64
-
-				// 检查7天下跌
-				if has7d && rate7d < -0.05 {
-					hasValidDecline = true
-					declineRate = rate7d
-				}
-				// 检查6-7天下跌 - 稍微放宽一点
-				if !hasValidDecline && has7d && rate7d < -0.04 {
-					hasValidDecline = true
-					declineRate = rate7d
-				}
-				// 检查5天下跌 - 从3天数据推断
-				if !hasValidDecline && has3d && rate3d < -0.04 {
-					hasValidDecline = true
-					declineRate = rate3d * 1.5
-				}
-				// 检查4天下跌
-				if !hasValidDecline && has2d && rate2d < -0.03 {
-					hasValidDecline = true
-					declineRate = rate2d
-				}
-				// 检查3天下跌 - 需要最强的下跌
-				if !hasValidDecline && has1d && rate1d < -0.05 {
-					hasValidDecline = true
-					declineRate = rate1d
-				}
-
-				if hasValidDecline {
-					// 找最近的反弹点（1天、2天或3天内）
-					var latestRebound float64
-					var hasRebound bool
-
-					if has1d && rate1d > 0 {
-						latestRebound = rate1d
-						hasRebound = true
-					} else if has2d && rate2d > 0 {
-						latestRebound = rate2d
-						hasRebound = true
-					} else if has3d && rate3d > 0 {
-						latestRebound = rate3d
-						hasRebound = true
-					}
-
-					// 有反弹且在3天内
-					if hasRebound && latestRebound > 0 {
-						// 计算反弹恢复率：反弹幅度 / 跌幅
-						recoveryRate := latestRebound / (-declineRate)
-
-						// ⭐ 改进：反弹判断逻辑（追稳而非追涨）=====
-						// 确保选中的是"底部稳定反弹"而非"高位追涨"
-
-						// 反弹恢复率范围：必须在minRebound% ~ maxRebound%之间
-						// - 最低：必须恢复至少50%的跌幅（原来30%太低）
-						// - 最高：不超过跌幅的80%（防止追涨过度）
-						minRecoveryRate := *minRebound        // 从0.30提升至0.50
-						maxRecoveryRate := *maxRebound        // 新增：最高0.80
-						minAbsoluteReb := *minAbsoluteRebound // 从0.02提升至0.03
-
-						// 检查反弹是否在合理范围内
-						recoveryRateOK := recoveryRate >= minRecoveryRate && recoveryRate <= maxRecoveryRate
-						absoluteReOK := latestRebound >= minAbsoluteReb && latestRebound <= *maxAbsoluteRebound1d
-
-						// 单日反弹不能超过5%
-						if has1d && latestRebound == rate1d && rate1d > *maxAbsoluteRebound1d {
-							// 1天反弹超过5%，标记为风险较高但仍保留
-						}
-
-						if recoveryRateOK || absoluteReOK {
-							// 反弹在合理范围内，这是底部反弹信号！✅
-							// 在抄底模式下，这是符合条件的商品
-						} else {
-							// 反弹不在合理范围内，需要排除
-							secondStageFiltered++
-							continue
-						}
-					} else {
-						// 没有有效反弹，排除
-						secondStageFiltered++
-						continue
-					}
-				} else {
-					// 没有足够的前期下跌，在抄底模式下排除
-					secondStageFiltered++
-					continue
-				}
-			} else {
-				// ===== 全量分析模式：过滤持续下跌的商品 =====
-				// 要避免的：连续多日下跌（特别是1天 AND 7天都在跌）
-				// 因为这表示价格在持续恶化，风险很大
-
-				// 检查是否存在多日连续下跌
-				consecutiveDownDays := 0
-				if has1d && rate1d < 0 {
-					consecutiveDownDays++
-				}
-				if has2d && rate2d < 0 {
-					consecutiveDownDays++
-				}
-				if has3d && rate3d < 0 {
-					consecutiveDownDays++
-				}
-
-				// 如果1天和7天都在跌，表示持续下跌趋势，需要过滤
-				if has1d && has7d && rate1d < 0 && rate7d < 0 && rate7d < -0.02 {
-					// 持续下跌且7天跌幅超过2%，排除
-					secondStageFiltered++
-					continue
-				}
-
-				// 如果连续3天都在跌，也排除
-				if consecutiveDownDays >= 3 {
-					secondStageFiltered++
-					continue
-				}
-			}
+		// === 简化的预测模型过滤 ===
+		// 如果有预测结果，可以使用预测的置信度作为额外的过滤依据
+		// 低置信度的预测结果应该更谨慎地对待
+		if hasPrediction && predictionConfidence < 0.5 {
+			log.Printf("[低置信度] ID:%d 名称:%s | 置信度: %.0f%%，谨慎对待",
+				goodID, candidate.good.Name, predictionConfidence*100)
 		}
 
 		// === 风险评估（使用金融波动率模型）===
@@ -2747,7 +2651,7 @@ func runAnalysis(db *gorm.DB) {
 		opportunity.Score = math.Round(s*10) / 10
 
 		// 打印包含评分的关键信息，便于观察每个候选项
-		log.Printf("[评分] ID:%d 名称:%s | 利润率:%.1f%% | 趋势:%s | 风险:%s | 分数:%.1f",
+		logMsg := fmt.Sprintf("[评分] ID:%d 名称:%s | 利润率:%.1f%% | 趋势:%s | 风险:%s | 分数:%.1f",
 			opportunity.GoodID,
 			opportunity.GoodName,
 			opportunity.ProfitRate*100,
@@ -2755,17 +2659,22 @@ func runAnalysis(db *gorm.DB) {
 			opportunity.RiskLevel,
 			opportunity.Score,
 		)
+		if hasPrediction && forecastedPrice7d > 0 {
+			logMsg += fmt.Sprintf(" | 预测7天价: %.2f元 (置信度:%.0f%%)", forecastedPrice7d, predictionConfidence*100)
+			predictionCount++
+		}
+		log.Printf(logMsg)
 
 		opportunities = append(opportunities, opportunity)
 	}
 
-	log.Printf("[第二阶段] 分析完成! 共计算出 %d 个套利机会", len(opportunities))
-	if secondStageFiltered > 0 {
-		log.Printf("[第二阶段] 过滤统计: 总过滤 %d 个, 其中多周期走弱 %d 个", secondStageFiltered, multiPeriodWeakFiltered)
+	log.Printf("[第三阶段] 分析完成! 共计算出 %d 个套利机会，其中 %d 个使用了最新预测", len(opportunities), predictionCount)
+	if skipCount > 0 {
+		log.Printf("[第三阶段] 过滤统计: 预测价格下跌而跳过 %d 个", skipCount)
 	}
 
-	// 第三阶段：智能算法优化求购清单
-	log.Printf("[套利分析] ==================== 第三阶段：优化求购清单 ====================")
+	// 第四阶段：智能算法优化求购清单
+	log.Printf("[套利分析] ==================== 第四阶段：优化求购清单 ====================")
 
 	if len(opportunities) == 0 {
 		log.Printf("[套利分析] 未发现符合条件的套利机会")
@@ -3990,4 +3899,328 @@ func SaveAdjustmentLog(filepath string) error {
 	}
 
 	return os.WriteFile(filepath, []byte(output.String()), 0644)
+}
+
+// batchPredictWithConcurrency 分批并发预测，每批最多50个商品，控制并发量
+// 参数说明：
+// - goodIDs: 要预测的商品ID列表
+// - batchSize: 每批的大小（建议50-100，平衡API效率和实时性）
+// - concurrency: 并发批数（建议2-4，避免过多并发导致服务压力和实时性问题）
+// - predictionClient: 预测客户端
+// - days: 预测天数
+func batchPredictWithConcurrency(
+	goodIDs []int64,
+	batchSize int,
+	concurrency int,
+	predictionClient *services.PredictionClient,
+	days int,
+) (map[int64]*services.PredictionResult, int, int) {
+	if batchSize < 1 || batchSize > 100 {
+		batchSize = 50 // 默认50
+	}
+	if concurrency < 1 || concurrency > 10 {
+		concurrency = 2 // 默认2个并发
+	}
+
+	totalGoodIDs := len(goodIDs)
+	if totalGoodIDs == 0 {
+		return make(map[int64]*services.PredictionResult), 0, 0
+	}
+
+	// 计算需要多少批
+	numBatches := (totalGoodIDs + batchSize - 1) / batchSize
+	log.Printf("[分批并发预测] 共 %d 个商品，批大小 %d，共需 %d 批，并发数 %d",
+		totalGoodIDs, batchSize, numBatches, concurrency)
+
+	// 准备批次
+	type batchJob struct {
+		batchIdx  int
+		batchGIDs []int64
+		startIdx  int
+		endIdx    int
+	}
+	batches := make([]batchJob, 0, numBatches)
+	for i := 0; i < totalGoodIDs; i += batchSize {
+		end := i + batchSize
+		if end > totalGoodIDs {
+			end = totalGoodIDs
+		}
+		batches = append(batches, batchJob{
+			batchIdx:  len(batches),
+			batchGIDs: goodIDs[i:end],
+			startIdx:  i,
+			endIdx:    end,
+		})
+	}
+
+	// 使用信道处理并发
+	type resultJob struct {
+		batchIdx int
+		results  map[int64]*services.PredictionResult
+		err      error
+	}
+
+	jobsChan := make(chan batchJob, numBatches)
+	resultsChan := make(chan resultJob, numBatches)
+
+	// 启动并发预测工作者
+	var wg sync.WaitGroup
+	for w := 0; w < concurrency && w < numBatches; w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for job := range jobsChan {
+				batchStartTime := time.Now()
+				log.Printf("[批次 %d/%d] Worker-%d: 预测 %d 个商品 (IDs: %d-%d)...",
+					job.batchIdx+1, numBatches, workerID, len(job.batchGIDs), job.startIdx+1, job.endIdx)
+
+				results, err := predictionClient.BatchPredict(job.batchGIDs, days)
+				if err != nil {
+					log.Printf("[批次 %d] ⚠️ 预测失败: %v", job.batchIdx+1, err)
+					resultsChan <- resultJob{
+						batchIdx: job.batchIdx,
+						results:  make(map[int64]*services.PredictionResult),
+						err:      err,
+					}
+				} else {
+					log.Printf("[批次 %d] ✓ 完成，耗时 %.2f 秒，成功 %d 个",
+						job.batchIdx+1, time.Since(batchStartTime).Seconds(), len(results))
+					resultsChan <- resultJob{
+						batchIdx: job.batchIdx,
+						results:  results,
+						err:      nil,
+					}
+				}
+
+				// 控制请求速率，避免过快
+				time.Sleep(100 * time.Millisecond)
+			}
+		}(w)
+	}
+
+	// 发送批次任务到信道
+	go func() {
+		for _, batch := range batches {
+			jobsChan <- batch
+		}
+		close(jobsChan)
+	}()
+
+	// 收集结果
+	allResults := make(map[int64]*services.PredictionResult)
+	successCount := 0
+	errorCount := 0
+
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	for result := range resultsChan {
+		if result.err == nil {
+			for goodID, predResult := range result.results {
+				allResults[goodID] = predResult
+				successCount++
+			}
+		} else {
+			errorCount++
+		}
+	}
+
+	return allResults, successCount, errorCount
+}
+
+// smallBatchPredictWithConcurrency 使用小批量预测 API (每批10个商品) + 高并发的方式预测多个商品
+// 这种方式平衡了单个预测的慢和大批量预测的超时问题
+func smallBatchPredictWithConcurrency(
+	goodIDs []int64,
+	batchSize int,
+	numWorkers int,
+	predictionClient *services.PredictionClient,
+	days int,
+) (map[int64]*services.PredictionResult, int, int) {
+	if len(goodIDs) == 0 {
+		return make(map[int64]*services.PredictionResult), 0, 0
+	}
+
+	if batchSize < 1 || batchSize > 50 {
+		batchSize = 10 // 默认10个
+	}
+	if numWorkers < 1 || numWorkers > 100 {
+		numWorkers = 20 // 默认20个并发
+	}
+
+	log.Printf("[小批预测并发] 开始预测 %d 个商品，批大小 %d，使用 %d 个并发线程...", len(goodIDs), batchSize, numWorkers)
+	startTime := time.Now()
+
+	// 准备小批次
+	type batchJob struct {
+		batchIdx  int
+		batchGIDs []int64
+	}
+	batches := make([]batchJob, 0)
+	for i := 0; i < len(goodIDs); i += batchSize {
+		end := i + batchSize
+		if end > len(goodIDs) {
+			end = len(goodIDs)
+		}
+		batches = append(batches, batchJob{
+			batchIdx:  len(batches),
+			batchGIDs: goodIDs[i:end],
+		})
+	}
+
+	jobsChan := make(chan batchJob, len(batches))
+	type resultJob struct {
+		results map[int64]*services.PredictionResult
+		err     error
+	}
+	resultsChan := make(chan resultJob, len(batches))
+
+	// 启动并发预测工作者
+	var wg sync.WaitGroup
+	for w := 0; w < numWorkers && w < len(batches); w++ {
+		wg.Add(1)
+		go func(workerID int) {
+			defer wg.Done()
+			for job := range jobsChan {
+				results, err := predictionClient.BatchPredict(job.batchGIDs, days)
+				if err == nil {
+					for _, goodID := range job.batchGIDs {
+						if _, ok := results[goodID]; ok {
+							log.Printf("[小批预测并发] ✓ good_id=%d 预测成功", goodID)
+						} else {
+							log.Printf("[小批预测并发] ✗ good_id=%d 预测失败: 无结果", goodID)
+						}
+					}
+				} else {
+					for _, goodID := range job.batchGIDs {
+						log.Printf("[小批预测并发] ✗ good_id=%d 预测失败: %v", goodID, err)
+					}
+				}
+				resultsChan <- resultJob{
+					results: results,
+					err:     err,
+				}
+			}
+		}(w)
+	}
+
+	// 发送任务到信道
+	go func() {
+		for _, batch := range batches {
+			jobsChan <- batch
+		}
+		close(jobsChan)
+	}()
+
+	// 等待所有工作者完成并关闭结果通道
+	go func() {
+		wg.Wait()
+		close(resultsChan)
+	}()
+
+	// 收集结果
+	allResults := make(map[int64]*services.PredictionResult)
+	successCount := 0
+	errorCount := 0
+
+	for result := range resultsChan {
+		if result.err == nil {
+			for goodID, predResult := range result.results {
+				allResults[goodID] = predResult
+				successCount++
+			}
+		} else {
+			errorCount++
+		}
+	}
+
+	log.Printf("[小批预测并发] 完成! 耗时 %.2f 秒，总计 %d，成功 %d，失败 %d",
+		time.Since(startTime).Seconds(), len(goodIDs), successCount, errorCount)
+
+	return allResults, successCount, errorCount
+}
+
+// filterByHistoricalPrediction 使用历史数据进行首轮预测，快速过滤有潜力的商品
+// 这个函数在获取最新价格之前执行，可以快速筛选出有机会的商品，避免浪费时间获取无机会商品的最新价格
+// 参数说明：
+// - goodIDs: 所有待分析的商品ID
+// - goodsCache: 商品信息缓存
+// - predictionClient: 预测客户端
+// 返回值：
+// - 筛选后的商品ID列表（这些商品的7天后预测价格有潜力）
+// - 过滤统计信息
+func filterByHistoricalPrediction(
+	goodIDs []int64,
+	goodsCache map[int64]models.CSQAQGood,
+	predictionClient *services.PredictionClient,
+) ([]int64, map[string]int) {
+	if len(goodIDs) == 0 {
+		return []int64{}, map[string]int{}
+	}
+
+	log.Printf("[历史预测过滤] 开始用历史数据预测 %d 个商品...", len(goodIDs))
+	filterStartTime := time.Now()
+
+	// 使用小批量预测 + 高并发的方式（每批10个，20个线程，避免超时）
+	predictions, successCount, errorCount := smallBatchPredictWithConcurrency(
+		goodIDs,
+		10, // 每批10个商品
+		20, // 20个并发线程
+		predictionClient,
+		7,
+	)
+
+	log.Printf("[历史预测过滤] 历史预测完成: 耗时 %.2f 秒，成功 %d，失败 %d",
+		time.Since(filterStartTime).Seconds(), successCount, errorCount)
+
+	stats := map[string]int{
+		"total":              len(goodIDs),
+		"prediction_success": successCount,
+		"prediction_error":   errorCount,
+		"filtered_passed":    0,
+		"filtered_rejected":  0,
+	}
+
+	// 根据预测结果过滤（只保留预测成功且7天后能够盈利的商品）
+	filteredGoodIDs := make([]int64, 0, len(goodIDs))
+
+	for _, goodID := range goodIDs {
+		pred, hasPred := predictions[goodID]
+		if !hasPred || pred == nil {
+			// 预测失败，拒绝该商品
+			stats["filtered_rejected"]++
+			continue
+		}
+
+		// 获取7天后的预测价格
+		ensemble, err := pred.GetEnsembleForecast()
+		if err != nil || len(ensemble) < 7 {
+			// 预测结果无效，拒绝该商品
+			stats["filtered_rejected"]++
+			continue
+		}
+
+		forecastedPrice := ensemble[6] // 第7天价格
+		currentPrice := pred.CurrentPrice
+
+		// 过滤条件：预测价格上涨 >= 3% 才值得获取最新价格重新预测
+		priceDiff := (forecastedPrice - currentPrice) / currentPrice
+		if priceDiff >= 0.03 {
+			// 预测成功且能盈利，保留
+			filteredGoodIDs = append(filteredGoodIDs, goodID)
+			stats["filtered_passed"]++
+		} else {
+			// 预测下跌或涨幅不足，拒绝
+			stats["filtered_rejected"]++
+		}
+	}
+
+	log.Printf("[历史预测过滤] 过滤完成: 通过 %d 个，拒绝 %d 个，保留率 %.1f%%",
+		stats["filtered_passed"],
+		stats["filtered_rejected"],
+		float64(stats["filtered_passed"])/float64(len(goodIDs))*100)
+
+	return filteredGoodIDs, stats
 }

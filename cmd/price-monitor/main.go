@@ -48,7 +48,7 @@ const (
 const (
 	// MySQL 连接字符串
 	// 格式: username:password@tcp(host:port)/database?charset=utf8mb4&parseTime=True&loc=Local
-	DefaultDBURL = "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
+	DefaultDBURL = "root:Wyj250413.@tcp(192.3.81.194:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
 )
 
 // MonitorState 监控状态

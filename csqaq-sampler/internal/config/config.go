@@ -23,7 +23,7 @@ type YoupinAccount struct {
 
 func Load() *Config {
 	// Default MySQL connection string
-	defaultDSN := "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
+	defaultDSN := "root:Wyj250413.@tcp(localhost:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
 
 	return &Config{
 		DatabaseURL: getEnv("DATABASE_URL", defaultDSN),

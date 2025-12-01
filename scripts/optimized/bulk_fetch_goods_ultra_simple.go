@@ -43,7 +43,7 @@ type GoodInfo struct {
 const (
 	apiToken    = "UAXMU177X578K1Q9E1G0N5M8"
 	apiBaseURL  = "https://api.csqaq.com/api/v1"
-	databaseDSN = "root:Wyj250413.@tcp(23.254.215.66:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
+	databaseDSN = "root:Wyj250413.@tcp(192.3.81.194:3306)/csgo_trader?charset=utf8mb4&parseTime=True&loc=Local"
 	minPrice    = 3.0
 	maxPrice    = 50.0
 )
