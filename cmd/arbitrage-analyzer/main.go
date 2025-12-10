@@ -34,6 +34,7 @@ var (
 	maxReasonablePrice = flag.Float64("max-price", 300, "最高合理价格（默认 300元，过滤异常价格）")
 	maxPriceSpread     = flag.Float64("max-spread", 2.0, "最大价差倍数（默认 2.0倍，售价不超过求购价的2倍）")
 	minPrice           = flag.Float64("min-price", 2, "最低价格（默认2元，低于此价格视为垃圾商品）")
+	maxPriceLimit      = flag.Float64("max-price-limit", 100, "最高价格限制（默认100元，只看100块钱以下的饰品）")
 	maxQuantityPerItem = flag.Int("max-qty", 2, "每种饰品最多购买数量（默认2件，增加多样性）")
 	once               = flag.Bool("once", false, "只运行一次，不循环")
 	dbURL              = flag.String("db", "", "数据库连接字符串")
@@ -43,6 +44,9 @@ var (
 	concurrency        = flag.Int("concurrency", 10, "并发线程数（默认10，用于加速商品分析）")
 	autoPurchase       = flag.Bool("auto-purchase", false, "验证通过后自动实时下单求购（默认关闭）")
 	onlyBottomRebound  = flag.Bool("only-bottom", false, "只看能抄底的饰品：前期下跌+当前反弹（默认关闭，关闭时为全量分析）")
+	// ===== 新增：扫货模式参数 =====
+	scanMarketMode    = flag.Bool("scan-market", false, "扫货模式：直接从市场购买预测7天后能盈利的饰品（风险更高，无价差保底，要求更严格）")
+	scanMinProfitRate = flag.Float64("scan-min-profit", 0.12, "扫货模式最小利润率（默认12%，因为没有价差保底需要更高要求）")
 	// ===== 新增：反弹幅度控制参数（追稳而非追涨）=====
 	minRebound           = flag.Float64("min-rebound", 0.50, "反弹恢复率下限（默认50%：必须恢复跌幅的50%才认为有效反弹，从30%提升）")
 	maxRebound           = flag.Float64("max-rebound", 0.80, "反弹恢复率上限（默认80%：反弹不能超过跌幅的80%，防止追涨）")
@@ -705,6 +709,27 @@ func calculateScore(opp models.ArbitrageOpportunity) float64 {
 
 	score += cycleScore
 
+	// === 10. 预测置信度评分（权重8%）⭐新增⭐===
+	// 置信度越高，预测越可靠，评分越高
+	confidenceScore := 0.0
+	if opp.PredictionConfidence > 0 {
+		if opp.PredictionConfidence >= 0.85 {
+			confidenceScore = 8.0 // 极高置信度
+		} else if opp.PredictionConfidence >= 0.75 {
+			confidenceScore = 6.5 // 高置信度
+		} else if opp.PredictionConfidence >= 0.65 {
+			confidenceScore = 5.0 // 中等置信度
+		} else if opp.PredictionConfidence >= 0.55 {
+			confidenceScore = 3.0 // 低置信度
+		} else {
+			confidenceScore = 1.0 // 极低置信度
+		}
+	} else {
+		// 无置信度数据，给予中等分数
+		confidenceScore = 4.0
+	}
+	score += confidenceScore
+
 	return score
 }
 
@@ -756,8 +781,10 @@ func generatePurchasePlan(opportunities []models.ArbitrageOpportunity, budget fl
 			continue
 		}
 
-		// 计算预期利润：(售价*0.99 - 买价) * 数量
-		profit := (opp.CurrentSellPrice*0.99 - buyPrice) * float64(quantity)
+		// 计算预期利润
+		// 注意：opp.EstimatedProfit 已经是基于预测7天后售价计算的单件净利润
+		// 求购模式和扫货模式都统一使用 EstimatedProfit
+		profit := opp.EstimatedProfit * float64(quantity)
 
 		item := PurchaseItem{
 			GoodID:   opp.GoodID,
@@ -1054,8 +1081,8 @@ func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
 
 	for i, r := range results {
 		displayName := r.GoodName
-		if len(displayName) > 43 {
-			displayName = displayName[:40] + "..."
+		if len(displayName) > 68 {
+			displayName = displayName[:65] + "..."
 		}
 
 		resultIcon := "❌"
@@ -1063,7 +1090,7 @@ func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
 			resultIcon = "✅"
 		}
 
-		log.Printf("#%-3d %-45s %7.2f元 %7.2f元 %9.1f%% %9.1f%% %8s",
+		log.Printf("#%-3d %-70s %7.2f元 %7.2f元 %9.1f%% %9.1f%% %8s",
 			i+1, displayName,
 			r.PredictedProfit, r.ActualProfit,
 			r.ProfitAccuracy*100, r.PriceChangeRate*100,
@@ -1294,12 +1321,13 @@ func verifyOpportunitiesPrices(db *gorm.DB, ypClient *youpin.OpenAPIClient, oppo
 									if latestMax <= 0 {
 										latestMax = result.VerifiedBuyPrice
 									}
-									bumped := bumpPurchasePrice(latestMax)
+									// 使用验证后的最低售价决定加价步进规则
+									bumped := bumpPurchasePrice(latestMax, result.VerifiedSellPrice)
 									// 执行下单
 									if err := placeImmediatePurchaseOrder(db, ypClient, opp.GoodID, item.GoodName, item.Quantity, bumped, timeoutSec); err != nil {
 										log.Printf("[自动下单] [Worker-%d] %s 下单失败: %v", wid, opp.GoodName, err)
 									} else {
-										log.Printf("[自动下单] [Worker-%d] %s 已创建求购订单: 数量=%d, 价格=¥%.2f (最高=¥%.2f)", wid, opp.GoodName, item.Quantity, bumped, latestMax)
+										log.Printf("[自动下单] [Worker-%d] %s 已创建求购订单: 数量=%d, 价格=¥%.2f (最高=¥%.2f, 售价=¥%.2f)", wid, opp.GoodName, item.Quantity, bumped, latestMax, result.VerifiedSellPrice)
 									}
 								}
 							}
@@ -1642,21 +1670,36 @@ func processOneGood(
 
 	// 基础价格检查
 	if currentBuyPrice <= 0 || currentSellPrice <= 0 ||
-		currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice ||
-		currentBuyPrice < *minPrice || currentSellPrice < *minPrice ||
-		currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+		currentSellPrice > *maxReasonablePrice ||
+		currentSellPrice < *minPrice ||
+		currentSellPrice > *maxPriceLimit {
 		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 价格异常 (买:%.2f, 卖:%.2f)", goodID, name, currentBuyPrice, currentSellPrice)
 		resultChan <- result
 		return
 	}
 
-	// 套利空间检查
-	feeRate := 0.01
-	netSellPrice := currentSellPrice * (1 - feeRate)
-	if netSellPrice <= currentBuyPrice {
-		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无套利空间 (净卖价:%.2f <= 买价:%.2f)", goodID, name, netSellPrice, currentBuyPrice)
-		resultChan <- result
-		return
+	// 求购模式下的额外检查
+	if !*scanMarketMode {
+		if currentBuyPrice > *maxReasonablePrice || currentBuyPrice < *minPrice || currentBuyPrice > *maxPriceLimit {
+			log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 求购价异常 (买:%.2f)", goodID, name, currentBuyPrice)
+			resultChan <- result
+			return
+		}
+
+		if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+			log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 价差异常 (卖:%.2f > 买:%.2f * %.1f)", goodID, name, currentSellPrice, currentBuyPrice, *maxPriceSpread)
+			resultChan <- result
+			return
+		}
+
+		// 套利空间检查（只在求购模式下需要）
+		feeRate := 0.01
+		netSellPrice := currentSellPrice * (1 - feeRate)
+		if netSellPrice <= currentBuyPrice {
+			log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 无套利空间 (净卖价:%.2f <= 买价:%.2f)", goodID, name, netSellPrice, currentBuyPrice)
+			resultChan <- result
+			return
+		}
 	}
 
 	// 获取订单数量
@@ -1683,9 +1726,17 @@ func processOneGood(
 	}
 
 	// 流动性检查
-	if sellOrderCount < *minSellCount || buyOrderCount < *minBuyCount {
-		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 流动性不足 (在售:%d<%d, 求购:%d<%d)",
-			goodID, name, sellOrderCount, *minSellCount, buyOrderCount, *minBuyCount)
+	if sellOrderCount < *minSellCount {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 在售数量不足 (在售:%d<%d)",
+			goodID, name, sellOrderCount, *minSellCount)
+		resultChan <- result
+		return
+	}
+
+	// 求购模式下还需要检查求购数量
+	if !*scanMarketMode && buyOrderCount < *minBuyCount {
+		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 求购数量不足 (求购:%d<%d)",
+			goodID, name, buyOrderCount, *minBuyCount)
 		resultChan <- result
 		return
 	}
@@ -1714,20 +1765,19 @@ func processOneGood(
 		}
 	}
 
-	// 利润率检查
-	estimatedProfit := netSellPrice - currentBuyPrice
-	profitRate := estimatedProfit / currentBuyPrice
-
-	if profitRate < *minProfitRate {
-		log.Printf("[第一阶段] ✗ ID=%d, 名称=%s, 被排除: 利润率不足 (%.2f%% < %.2f%%)",
-			goodID, name, profitRate*100, *minProfitRate*100)
-		resultChan <- result
-		return
-	}
+	// 第一阶段不做利润率检查，因为：
+	// - 求购模式：需要使用预测的7天后售价来计算利润率（预测在第二阶段）
+	// - 扫货模式：同样需要预测的7天后价格
+	// 利润率检查延后到第三阶段（使用预测结果）
 
 	// 通过了所有检查
-	log.Printf("[第一阶段] ✓ ID=%d, 名称=%s, 通过所有检查 (在售:%d, 求购:%d, 买价:%.2f, 卖价:%.2f, 利润率:%.2f%%)",
-		goodID, name, sellOrderCount, buyOrderCount, currentBuyPrice, currentSellPrice, profitRate*100)
+	if *scanMarketMode {
+		log.Printf("[第一阶段] ✓ ID=%d, 名称=%s, 通过基础检查 (在售:%d, 当前卖价:%.2f, 利润率:待预测)",
+			goodID, name, sellOrderCount, currentSellPrice)
+	} else {
+		log.Printf("[第一阶段] ✓ ID=%d, 名称=%s, 通过基础检查 (在售:%d, 求购:%d, 当前买价:%.2f, 当前卖价:%.2f, 利润率:待预测)",
+			goodID, name, sellOrderCount, buyOrderCount, currentBuyPrice, currentSellPrice)
+	}
 
 	// === 抄底策略检查（第一阶段）===
 	// 在第一阶段就识别底部反弹特征，避免遗漏抄底机会
@@ -1919,13 +1969,26 @@ func main() {
 
 	log.Printf("[套利分析器] 启动中...")
 	log.Printf("[套利分析器] 配置:")
-	log.Printf("  - 最小利润率: %.2f%% ⬆️", *minProfitRate*100)
-	log.Printf("  - 求购预算: ¥%.2f", *budget)
+
+	// 根据模式显示不同的配置
+	if *scanMarketMode {
+		log.Printf("  🛒 模式: 扫货模式（直接购买市场饰品）")
+		log.Printf("  - 最小利润率: %.2f%% ⬆️ (扫货模式要求更高)", *scanMinProfitRate*100)
+	} else {
+		log.Printf("  💰 模式: 求购模式（通过求购获取饰品）")
+		log.Printf("  - 最小利润率: %.2f%% ⬆️", *minProfitRate*100)
+	}
+
+	log.Printf("  - 预算: ¥%.2f", *budget)
 	log.Printf("  - 价格范围: ¥%.2f ~ ¥%.2f", *minPrice, *maxReasonablePrice)
 	log.Printf("  - 最少在售数量: %d件", *minSellCount)
-	log.Printf("  - 最少求购数量: %d件", *minBuyCount)
+	if !*scanMarketMode {
+		log.Printf("  - 最少求购数量: %d件", *minBuyCount)
+	}
 	log.Printf("  - 每种饰品最多: %d件 🎯", *maxQuantityPerItem)
-	log.Printf("  - 最大价差倍数: %.1f倍", *maxPriceSpread)
+	if !*scanMarketMode {
+		log.Printf("  - 最大价差倍数: %.1f倍", *maxPriceSpread)
+	}
 	log.Printf("  - 最少历史天数: %d天", *minDaysHistory)
 	log.Printf("  - 并发线程数: %d", *concurrency)
 	log.Printf("[多样性策略] 优先广度而非深度:")
@@ -2128,6 +2191,14 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 
 	log.Printf("[二次预测] 开始对 %d 个候选商品进行二次预测（基于最新价格）...", len(goodIDsForFinalPrediction))
 
+	// 根据模式确定mode参数
+	var predictionMode string
+	if *scanMarketMode {
+		predictionMode = "scan"
+	} else {
+		predictionMode = "bid"
+	}
+
 	// 使用小批量预测 + 高并发的方式（每批10个，20个线程，避免超时）
 	predictions, successCount, errorCount := smallBatchPredictWithConcurrency(
 		goodIDsForFinalPrediction,
@@ -2135,6 +2206,7 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 		20, // 20个并发线程
 		predictionClient,
 		7,
+		predictionMode,
 	)
 
 	log.Printf("[二次预测] 完成! 总计 %d，成功 %d，失败 %d，耗时: %.2f 秒",
@@ -2449,12 +2521,6 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 		historicalSnapshots := candidate.historicalSnapshots
 		goodID := candidate.good.GoodID
 
-		// 重新计算利润率
-		var feeRate2 float64 = 0.01
-		var netSellPrice2 float64 = currentSellPrice * (1 - feeRate2)
-		estimatedProfit := netSellPrice2 - currentBuyPrice
-		profitRate := estimatedProfit / currentBuyPrice
-
 		// === 集成预测模型分析 ===
 		// 获取该商品的预测结果
 		prediction, hasPrediction := predictions[goodID]
@@ -2471,29 +2537,80 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 			}
 		}
 
-		// 如果有预测且预测未来价格会下跌，则跳过
-		if hasPrediction && forecastedPrice7d > 0 && forecastedPrice7d < currentBuyPrice {
-			log.Printf("[跳过] ID:%d 名称:%s | 预测价格下跌: 当前%.2f -> 7天后%.2f",
-				goodID, candidate.good.Name, currentBuyPrice, forecastedPrice7d)
-			skipCount++
-			continue
+		// 重新计算利润率（根据模式不同）
+		var feeRate2 float64 = 0.01
+		var estimatedProfit float64
+		var profitRate float64
+		var actualMinProfitRate float64
+
+		if *scanMarketMode {
+			// 扫货模式：按售价买入，预测价格卖出
+			// 必须有预测结果才能判断
+			if !hasPrediction || forecastedPrice7d <= 0 {
+				// 没有预测，跳过
+				skipCount++
+				continue
+			}
+
+			// 计算7天后的利润率
+			var netForecastedPrice float64 = forecastedPrice7d * (1 - feeRate2)
+			estimatedProfit = netForecastedPrice - currentSellPrice
+			profitRate = estimatedProfit / currentSellPrice
+			actualMinProfitRate = *scanMinProfitRate
+
+			// 如果预测价格下跌或涨幅不足，跳过
+			if forecastedPrice7d <= currentSellPrice || profitRate < actualMinProfitRate {
+				log.Printf("[扫货跳过] ID:%d 名称:%s | 预测涨幅不足: 当前售价%.2f -> 7天后%.2f (%.1f%% < %.1f%%)",
+					goodID, candidate.good.Name, currentSellPrice, forecastedPrice7d, profitRate*100, actualMinProfitRate*100)
+				skipCount++
+				continue
+			}
+		} else {
+			// 求购模式：按求购价买入，7天后按预测价格卖出
+			// 必须有预测结果才能判断
+			if !hasPrediction || forecastedPrice7d <= 0 {
+				// 没有预测，跳过
+				skipCount++
+				continue
+			}
+
+			// 计算7天后的利润率（使用预测的7天后售价）
+			var netForecastedPrice float64 = forecastedPrice7d * (1 - feeRate2)
+			estimatedProfit = netForecastedPrice - currentBuyPrice
+			profitRate = estimatedProfit / currentBuyPrice
+			actualMinProfitRate = *minProfitRate
+
+			// 如果预测价格下跌或涨幅不足，跳过
+			if forecastedPrice7d <= currentBuyPrice || profitRate < actualMinProfitRate {
+				log.Printf("[求购跳过] ID:%d 名称:%s | 预测涨幅不足: 当前求购%.2f -> 7天后%.2f (%.1f%% < %.1f%%)",
+					goodID, candidate.good.Name, currentBuyPrice, forecastedPrice7d, profitRate*100, actualMinProfitRate*100)
+				skipCount++
+				continue
+			}
 		}
 
 		// === 第二阶段：基础有效性检查 ===
 
 		// 价格上限检查
-		if currentBuyPrice > *maxReasonablePrice || currentSellPrice > *maxReasonablePrice {
+		if currentSellPrice > *maxReasonablePrice {
 			continue
 		}
 
 		// 价格下限检查
-		if currentBuyPrice < 0.5 || currentSellPrice < 0.5 {
+		if currentSellPrice < 0.5 {
 			continue
 		}
 
-		// 价差合理性检查
-		if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
-			continue
+		// 求购模式下的额外检查
+		if !*scanMarketMode {
+			if currentBuyPrice > *maxReasonablePrice || currentBuyPrice < 0.5 {
+				continue
+			}
+
+			// 价差合理性检查
+			if currentSellPrice > currentBuyPrice*(*maxPriceSpread) {
+				continue
+			}
 		}
 
 		// 必须有实际利润
@@ -2505,7 +2622,13 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 		priceTrend := "unknown"
 		if hasPrediction && forecastedPrice7d > 0 {
 			// 基于预测价格判断趋势
-			priceDiff := (forecastedPrice7d - currentBuyPrice) / currentBuyPrice
+			var basePrice float64
+			if *scanMarketMode {
+				basePrice = currentSellPrice // 扫货模式：用售价作为基准
+			} else {
+				basePrice = currentBuyPrice // 求购模式：用求购价作为基准
+			}
+			priceDiff := (forecastedPrice7d - basePrice) / basePrice
 			if priceDiff > 0.05 { // 预测上涨5%以上
 				priceTrend = "up"
 			} else if priceDiff < -0.05 { // 预测下跌5%以上
@@ -2526,12 +2649,34 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 			}
 		}
 
-		// === 简化的预测模型过滤 ===
-		// 如果有预测结果，可以使用预测的置信度作为额外的过滤依据
-		// 低置信度的预测结果应该更谨慎地对待
-		if hasPrediction && predictionConfidence < 0.5 {
-			log.Printf("[低置信度] ID:%d 名称:%s | 置信度: %.0f%%，谨慎对待",
-				goodID, candidate.good.Name, predictionConfidence*100)
+		// === 置信度过滤 ===
+		// 使用真实的置信度进行过滤，低置信度的预测直接跳过
+		if hasPrediction && predictionConfidence > 0 {
+			// 置信度阈值：
+			// - 极低置信度 (<0.50): 直接跳过
+			// - 低置信度 (0.50-0.65): 仅保留高利润率的机会
+			// - 中等置信度 (0.65-0.80): 正常处理
+			// - 高置信度 (>0.80): 优先推荐
+
+			if predictionConfidence < 0.50 {
+				log.Printf("[置信度过滤] ID:%d 名称:%s | 置信度过低: %.0f%% < 50%%，跳过",
+					goodID, candidate.good.Name, predictionConfidence*100)
+				skipCount++
+				continue
+			}
+
+			if predictionConfidence < 0.65 {
+				// 低置信度时，要求更高的利润率
+				minRequiredProfitRate := actualMinProfitRate * 1.5 // 提高50%的利润率要求
+				if profitRate < minRequiredProfitRate {
+					log.Printf("[置信度过滤] ID:%d 名称:%s | 置信度较低: %.0f%%，利润率%.1f%% < 要求%.1f%%，跳过",
+						goodID, candidate.good.Name, predictionConfidence*100, profitRate*100, minRequiredProfitRate*100)
+					skipCount++
+					continue
+				}
+				log.Printf("[低置信度通过] ID:%d 名称:%s | 置信度: %.0f%%，但利润率足够高: %.1f%%",
+					goodID, candidate.good.Name, predictionConfidence*100, profitRate*100)
+			}
 		}
 
 		// === 风险评估（使用金融波动率模型）===
@@ -2617,30 +2762,38 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 			}
 		}
 
-		// 计算推荐求购价格（略高于当前最高求购价以提高成交率）
-		recommendedBuyPrice := currentBuyPrice * 1.01 // 比当前最高求购高1%
+		// 计算推荐买入价格（根据模式不同）
+		var recommendedBuyPrice float64
+		if *scanMarketMode {
+			// 扫货模式：直接按市场售价买入
+			recommendedBuyPrice = currentSellPrice
+		} else {
+			// 求购模式：根据最低在售价确定步进规则，对最高求购价加价
+			recommendedBuyPrice = bumpPurchasePrice(currentBuyPrice, currentSellPrice)
+		}
 
-		// 计算推荐求购数量（不在这里计算，后面统一分配预算）
+		// 计算推荐数量（不在这里计算，后面统一分配预算）
 		recommendedQuantity := 0
 
 		opportunity := models.ArbitrageOpportunity{
-			GoodID:              candidate.good.GoodID,
-			GoodName:            candidate.good.Name,
-			CurrentBuyPrice:     currentBuyPrice,
-			CurrentSellPrice:    currentSellPrice,
-			ProfitRate:          profitRate,
-			EstimatedProfit:     estimatedProfit,
-			AvgBuyPrice7d:       candidate.avgBuyPrice7d,
-			AvgSellPrice7d:      candidate.avgSellPrice7d,
-			PriceTrend:          priceTrend,
-			DaysOfData:          candidate.daysOfData,
-			RiskLevel:           riskLevel,
-			BuyOrderCount:       candidate.buyOrderCount,
-			SellOrderCount:      candidate.sellOrderCount,
-			RankNum:             candidate.rankNum, // 热度排名
-			RecommendedBuyPrice: recommendedBuyPrice,
-			RecommendedQuantity: recommendedQuantity,
-			AnalysisTime:        analysisTime,
+			GoodID:               candidate.good.GoodID,
+			GoodName:             candidate.good.Name,
+			CurrentBuyPrice:      currentBuyPrice,
+			CurrentSellPrice:     currentSellPrice,
+			ProfitRate:           profitRate,
+			EstimatedProfit:      estimatedProfit,
+			AvgBuyPrice7d:        candidate.avgBuyPrice7d,
+			AvgSellPrice7d:       candidate.avgSellPrice7d,
+			PriceTrend:           priceTrend,
+			DaysOfData:           candidate.daysOfData,
+			RiskLevel:            riskLevel,
+			BuyOrderCount:        candidate.buyOrderCount,
+			SellOrderCount:       candidate.sellOrderCount,
+			RankNum:              candidate.rankNum, // 热度排名
+			RecommendedBuyPrice:  recommendedBuyPrice,
+			RecommendedQuantity:  recommendedQuantity,
+			PredictionConfidence: predictionConfidence, // 预测置信度
+			AnalysisTime:         analysisTime,
 		}
 
 		// 计算并保存综合评分（四舍五入到1位小数，确保非负）
@@ -2753,14 +2906,54 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 		log.Printf("  - %s元: %d个", rangeKey, len(priceRangeGroups[rangeKey]))
 	}
 
+	// === 风险偏好过滤 ===
+	// 优先选择低风险和中风险，高风险只有在利润率特别高时才考虑
+	log.Printf("[风险控制] 开始应用风险偏好过滤...")
+	filteredByRisk := []models.ArbitrageOpportunity{}
+	riskStats := map[string]int{"low": 0, "medium": 0, "high_accepted": 0, "high_rejected": 0}
+
+	for _, opp := range opportunities {
+		switch opp.RiskLevel {
+		case "low":
+			// 低风险：全部接受
+			filteredByRisk = append(filteredByRisk, opp)
+			riskStats["low"]++
+		case "medium":
+			// 中风险：全部接受
+			filteredByRisk = append(filteredByRisk, opp)
+			riskStats["medium"]++
+		case "high":
+			// 高风险：只有利润率>=15%且置信度>=0.70才考虑
+			if opp.ProfitRate >= 0.15 && opp.PredictionConfidence >= 0.70 {
+				filteredByRisk = append(filteredByRisk, opp)
+				riskStats["high_accepted"]++
+				log.Printf("[高风险通过] ID:%d %s | 利润率:%.1f%% 置信度:%.0f%%",
+					opp.GoodID, opp.GoodName, opp.ProfitRate*100, opp.PredictionConfidence*100)
+			} else {
+				riskStats["high_rejected"]++
+				log.Printf("[高风险拒绝] ID:%d %s | 利润率:%.1f%%(需>=15%%) 置信度:%.0f%%(需>=70%%)",
+					opp.GoodID, opp.GoodName, opp.ProfitRate*100, opp.PredictionConfidence*100)
+			}
+		}
+	}
+
+	log.Printf("[风险控制] 过滤完成: 低风险%d个, 中风险%d个, 高风险接受%d个, 高风险拒绝%d个",
+		riskStats["low"], riskStats["medium"], riskStats["high_accepted"], riskStats["high_rejected"])
+
+	opportunities = filteredByRisk
+	if len(opportunities) == 0 {
+		log.Printf("[风险控制] ⚠️ 所有机会都被风险过滤器拒绝，请考虑降低风险要求或提高样本量")
+		return
+	}
+
 	// 输出所有评分的商品（用于详细分析）
 	log.Printf("[套利分析] ==================== 量化评分详情 (共 %d 个) ====================", len(opportunities))
 	displayCount := len(opportunities) // 显示所有找到的机会
 
-	log.Printf("%-4s %-50s %8s %6s %6s %8s %8s %6s",
+	log.Printf("%-4s %-70s %8s %6s %6s %8s %8s %6s",
 		"排名", "商品名称", "综合评分", "类型", "磨损", "利润率", "趋势", "风险")
-	log.Printf("%-4s %-50s %8s %6s %6s %8s %8s %6s",
-		"----", "--------------------------------------------------", "--------", "------", "------", "--------", "--------", "------")
+	log.Printf("%-4s %-70s %8s %6s %6s %8s %8s %6s",
+		"----", "----------------------------------------------------------------------", "--------", "------", "------", "--------", "--------", "------")
 
 	for i := 0; i < displayCount; i++ {
 		opp := opportunities[i]
@@ -2774,8 +2967,8 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 
 		// 截断过长的商品名称
 		displayName := opp.GoodName
-		if len(displayName) > 48 {
-			displayName = displayName[:45] + "..."
+		if len(displayName) > 68 {
+			displayName = displayName[:65] + "..."
 		}
 
 		// 趋势图标
@@ -2821,7 +3014,7 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 			}
 		}
 
-		log.Printf("#%-3d %-50s %7.1f分 %6s %5.1f分 %6.1f%% %8s %6s",
+		log.Printf("#%-3d %-70s %7.1f分 %6s %5.1f分 %6.1f%% %8s %6s",
 			i+1, displayName, score, weaponType, wearScore, opp.ProfitRate*100, trendIcon, riskIcon)
 
 		// 详细信息（第二行）- 新增市场周期信息
@@ -2875,28 +3068,81 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 	plan4 := generatePurchasePlan(sortedByValueRatio, *budget, "按性价比优先")
 	plans = append(plans, plan4)
 
-	// 输出所有方案对比
+	// 输出所有方案对比，并计算风险调整分数
 	log.Printf("[方案对比] ==================== 共生成 %d 个方案 ====================", len(plans))
+	type PlanWithScore struct {
+		Plan      PurchasePlan
+		Index     int
+		RiskScore float64 // 风险调整后的综合评分
+	}
+
+	plansWithScore := []PlanWithScore{}
+
 	for i, plan := range plans {
+		// 计算风险分布
+		lowRiskCount := 0
+		mediumRiskCount := 0
+		highRiskCount := 0
+
+		for _, item := range plan.Items {
+			// 找到对应的opportunity获取风险等级
+			for _, opp := range opportunities {
+				if opp.GoodID == item.GoodID {
+					switch opp.RiskLevel {
+					case "low":
+						lowRiskCount++
+					case "medium":
+						mediumRiskCount++
+					case "high":
+						highRiskCount++
+					}
+					break
+				}
+			}
+		}
+
+		// 计算风险调整系数
+		// 低风险商品占比越高，系数越高
+		totalCount := float64(len(plan.Items))
+		lowRiskRatio := float64(lowRiskCount) / totalCount
+		mediumRiskRatio := float64(mediumRiskCount) / totalCount
+		highRiskRatio := float64(highRiskCount) / totalCount
+
+		// 风险调整系数: 低风险1.0，中风险0.8，高风险0.5
+		riskAdjustmentFactor := lowRiskRatio*1.0 + mediumRiskRatio*0.8 + highRiskRatio*0.5
+
+		// 风险调整后的利润分数 = 原始利润 * 风险调整系数
+		riskAdjustedScore := plan.TotalProfit * riskAdjustmentFactor
+
+		plansWithScore = append(plansWithScore, PlanWithScore{
+			Plan:      plan,
+			Index:     i,
+			RiskScore: riskAdjustedScore,
+		})
+
 		log.Printf("[方案%d] %s:", i+1, plan.StrategyName)
 		log.Printf("  - 总成本: ¥%.2f", plan.TotalCost)
 		log.Printf("  - 预期利润: ¥%.2f", plan.TotalProfit)
+		log.Printf("  - 风险调整后得分: %.2f (低:%d 中:%d 高:%d)",
+			riskAdjustedScore, lowRiskCount, mediumRiskCount, highRiskCount)
 		log.Printf("  - 利润率: %.2f%%", plan.ProfitRate*100)
 		log.Printf("  - 商品种类: %d种", len(plan.Items))
 		log.Printf("  - 总件数: %d件", plan.TotalItems)
 	}
 
-	// 选择利润最大的方案
-	bestPlan := plans[0]
-	bestPlanIndex := 0
-	for i, plan := range plans {
-		if plan.TotalProfit > bestPlan.TotalProfit {
-			bestPlan = plan
-			bestPlanIndex = i
+	// 选择风险调整后得分最高的方案
+	bestPlanWithScore := plansWithScore[0]
+	for _, pws := range plansWithScore {
+		if pws.RiskScore > bestPlanWithScore.RiskScore {
+			bestPlanWithScore = pws
 		}
 	}
 
-	log.Printf("[最优方案] ✅ 方案%d（%s）利润最高: ¥%.2f", bestPlanIndex+1, bestPlan.StrategyName, bestPlan.TotalProfit)
+	bestPlan := bestPlanWithScore.Plan
+	bestPlanIndex := bestPlanWithScore.Index
+
+	log.Printf("[最优方案] ✅ 方案%d（%s）风险调整后得分最高: %.2f (原始利润:¥%.2f)",
+		bestPlanIndex+1, bestPlan.StrategyName, bestPlanWithScore.RiskScore, bestPlan.TotalProfit)
 	log.Printf("==========================================================================")
 
 	// 使用最优方案
@@ -2975,9 +3221,6 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 	verifiedOpportunities := verifyOpportunitiesPrices(db, ypClient, opportunities, purchaseList, *ypTimeoutSec)
 	log.Printf("[套利分析] 验证完成! 原始 %d 个，购买清单 %d 个，验证通过 %d 个", len(opportunities), len(purchaseList), len(verifiedOpportunities))
 
-	// 保留原始opportunities用于后续输出清单查询
-	originalOpportunities := opportunities
-
 	// 用验证后的机会清单替换原清单
 	opportunities = verifiedOpportunities
 
@@ -3029,17 +3272,10 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 					}
 				}
 
-				// 如果在验证后列表中找不到，从原始opportunities中查找（作为备用）
+				// 如果在验证后列表中找不到，跳过此商品（不加入最终求购清单）
 				if !found {
-					for _, opp := range originalOpportunities {
-						if opp.GoodID == item.GoodID {
-							profitRate = opp.ProfitRate
-							riskLevel = opp.RiskLevel
-							// 记录这个商品在验证后列表中缺失的情况
-							log.Printf("[⚠️ 警告] 商品 %s (ID:%d) 在验证后的opportunities中缺失，使用原始数据。利润率:%.2f%% 可能已变化", item.GoodName, item.GoodID, profitRate*100)
-							break
-						}
-					}
+					log.Printf("[⚠️ 警告] 商品 %s (ID:%d) 在验证后的opportunities中缺失，已从求购清单中移除", item.GoodName, item.GoodID)
+					continue
 				}
 
 				// 注意：OpenAPI不支持搜索功能，template_id需要从snapshot表获取或执行时再查询
@@ -3078,19 +3314,20 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 
 		// 输出完整的求购清单（格式化表格）
 		log.Printf("\n[求购清单] ==================== 最优求购清单 ====================")
-		log.Printf("%-4s %-50s %8s %6s %10s %8s %6s",
+		log.Printf("%-4s %-70s %8s %6s %10s %8s %6s",
 			"序号", "商品名称", "ID", "数量", "单价", "小计", "风险")
-		log.Printf("%-4s %-50s %8s %6s %10s %8s %6s",
-			"----", "--------------------------------------------------", "--------", "------", "----------", "--------", "------")
+		log.Printf("%-4s %-70s %8s %6s %10s %8s %6s",
+			"----", "----------------------------------------------------------------------", "--------", "------", "----------", "--------", "------")
 
-		for i, item := range purchaseList {
+		displayIndex := 1
+		for _, item := range purchaseList {
 			// 找到对应的机会详情
 			var profitRate float64
 			var riskLevel string
 			var priceTrend string
 			var avgBuyPrice7d float64
 			var avgSellPrice7d float64
-			var currentSellPrice float64
+			var estimatedProfit float64
 
 			// 首先从验证后的opportunities中查找
 			found := false
@@ -3101,33 +3338,21 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 					priceTrend = opp.PriceTrend
 					avgBuyPrice7d = opp.AvgBuyPrice7d
 					avgSellPrice7d = opp.AvgSellPrice7d
-					currentSellPrice = opp.CurrentSellPrice
+					estimatedProfit = opp.EstimatedProfit
 					found = true
 					break
 				}
 			}
 
-			// 如果在验证后列表中找不到，从原始opportunities中查找（作为备用）
+			// 如果在验证后列表中找不到，跳过此商品（不显示在最优求购清单中）
 			if !found {
-				for _, opp := range originalOpportunities {
-					if opp.GoodID == item.GoodID {
-						profitRate = opp.ProfitRate
-						riskLevel = opp.RiskLevel
-						priceTrend = opp.PriceTrend
-						avgBuyPrice7d = opp.AvgBuyPrice7d
-						avgSellPrice7d = opp.AvgSellPrice7d
-						currentSellPrice = opp.CurrentSellPrice
-						// 记录这个商品在验证后列表中缺失的情况
-						log.Printf("[⚠️ 警告] 商品 %s (ID:%d) 在验证后的opportunities中缺失，使用原始数据。利润率:%.2f%% 可能已变化", item.GoodName, item.GoodID, profitRate*100)
-						break
-					}
-				}
+				continue
 			}
 
 			// 截断商品名称
 			displayName := item.GoodName
-			if len(displayName) > 48 {
-				displayName = displayName[:45] + "..."
+			if len(displayName) > 68 {
+				displayName = displayName[:65] + "..."
 			}
 
 			// 风险图标
@@ -3169,11 +3394,13 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 				}
 			}
 
-			log.Printf("#%-3d %-50s %8d %5d件 %9.2f元 %7.2f元 %6s",
-				i+1, displayName, item.GoodID, item.Quantity, item.Price, item.Total, riskIcon)
+			log.Printf("#%-3d %-70s %8d %5d件 %9.2f元 %7.2f元 %6s",
+				displayIndex, displayName, item.GoodID, item.Quantity, item.Price, item.Total, riskIcon)
+			displayIndex++
 
-			// 计算单品预期利润: (售价*0.99 - 买价) * 数量
-			singleItemProfit := (currentSellPrice*0.99 - item.Price) * float64(item.Quantity)
+			// 计算单品预期利润
+			// 注意：EstimatedProfit 已经是基于预测7天后售价计算的单件净利润
+			singleItemProfit := estimatedProfit * float64(item.Quantity)
 
 			log.Printf("     利润率:%.1f%% | 趋势:%s | 周期:%s(%.1f%%) | 预期利润:¥%.2f",
 				profitRate*100, trendIcon+priceTrend, cycleStage, priceDeviation*100, singleItemProfit)
@@ -3184,13 +3411,13 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 			totalCost, totalItems, totalCost/float64(totalItems))
 
 		// 计算总预期利润
+		// 注意：opp.EstimatedProfit 已经是基于预测7天后售价计算的单件净利润
 		totalExpectedProfit := 0.0
 		for _, item := range purchaseList {
 			for _, opp := range opportunities {
 				if opp.GoodID == item.GoodID {
-					// 预期利润 = (售价*(1-手续费) - 求购价) * 数量
-					// 手续费率1%，扣除后为99%
-					profit := (opp.CurrentSellPrice*0.99 - item.Price) * float64(item.Quantity)
+					// 求购模式和扫货模式都统一使用 EstimatedProfit
+					profit := opp.EstimatedProfit * float64(item.Quantity)
 					totalExpectedProfit += profit
 					break
 				}
@@ -3338,22 +3565,28 @@ func getLatestMaxBuyPrice(db *gorm.DB, ypClient *youpin.OpenAPIClient, goodID in
 }
 
 // bumpPurchasePrice 按区间步进规则，将最高求购价加一个最小步进并保留对应精度
-// 区间：
+// 区间规则根据当前最低在售价决定：
 //
-//	0～1: 步进0.01；1～50: 0.1；50～1000: 1
+//	¥0-1 → 步进0.01 | ¥1-50 → 步进0.1 | ¥50-1000 → 步进1.0
 //
-// 示例：39 => 39.1；51 => 52
-func bumpPurchasePrice(maxBuy float64) float64 {
+// 参数：
+//
+//	maxBuy: 当前最高求购价
+//	minSell: 当前最低在售价（用于决定步进规则）
+//
+// 示例：minSell=39, maxBuy=38 => 38.1；minSell=51, maxBuy=50 => 51
+func bumpPurchasePrice(maxBuy float64, minSell float64) float64 {
 	if maxBuy < 0 {
 		maxBuy = 0
 	}
 	var step float64
 	var decimals float64
+	// 根据最低在售价决定步进规则
 	switch {
-	case maxBuy < 1:
+	case minSell < 1:
 		step = 0.01
 		decimals = 2
-	case maxBuy < 50:
+	case minSell < 50:
 		step = 0.1
 		decimals = 1
 	default:
@@ -3974,7 +4207,7 @@ func batchPredictWithConcurrency(
 				log.Printf("[批次 %d/%d] Worker-%d: 预测 %d 个商品 (IDs: %d-%d)...",
 					job.batchIdx+1, numBatches, workerID, len(job.batchGIDs), job.startIdx+1, job.endIdx)
 
-				results, err := predictionClient.BatchPredict(job.batchGIDs, days)
+				results, err := predictionClient.BatchPredict(job.batchGIDs, days, "bid")
 				if err != nil {
 					log.Printf("[批次 %d] ⚠️ 预测失败: %v", job.batchIdx+1, err)
 					resultsChan <- resultJob{
@@ -4038,6 +4271,7 @@ func smallBatchPredictWithConcurrency(
 	numWorkers int,
 	predictionClient *services.PredictionClient,
 	days int,
+	mode string, // 'bid' 求购模式 或 'scan' 扫货模式
 ) (map[int64]*services.PredictionResult, int, int) {
 	if len(goodIDs) == 0 {
 		return make(map[int64]*services.PredictionResult), 0, 0
@@ -4084,7 +4318,7 @@ func smallBatchPredictWithConcurrency(
 		go func(workerID int) {
 			defer wg.Done()
 			for job := range jobsChan {
-				results, err := predictionClient.BatchPredict(job.batchGIDs, days)
+				results, err := predictionClient.BatchPredict(job.batchGIDs, days, mode)
 				if err == nil {
 					for _, goodID := range job.batchGIDs {
 						if _, ok := results[goodID]; ok {
@@ -4163,6 +4397,14 @@ func filterByHistoricalPrediction(
 	log.Printf("[历史预测过滤] 开始用历史数据预测 %d 个商品...", len(goodIDs))
 	filterStartTime := time.Now()
 
+	// 根据模式确定mode参数
+	var predictionMode string
+	if *scanMarketMode {
+		predictionMode = "scan"
+	} else {
+		predictionMode = "bid"
+	}
+
 	// 使用小批量预测 + 高并发的方式（每批10个，20个线程，避免超时）
 	predictions, successCount, errorCount := smallBatchPredictWithConcurrency(
 		goodIDs,
@@ -4170,6 +4412,7 @@ func filterByHistoricalPrediction(
 		20, // 20个并发线程
 		predictionClient,
 		7,
+		predictionMode,
 	)
 
 	log.Printf("[历史预测过滤] 历史预测完成: 耗时 %.2f 秒，成功 %d，失败 %d",
@@ -4205,9 +4448,18 @@ func filterByHistoricalPrediction(
 		forecastedPrice := ensemble[6] // 第7天价格
 		currentPrice := pred.CurrentPrice
 
-		// 过滤条件：预测价格上涨 >= 3% 才值得获取最新价格重新预测
+		// 过滤条件：根据模式选择不同的阈值
+		// 求购模式: 预测涨幅 >= 3% (因为有价差保底)
+		// 扫货模式: 预测涨幅 >= 8% (因为没有价差保底,需要更严格)
+		var minPriceDiff float64
+		if *scanMarketMode {
+			minPriceDiff = 0.08 // 扫货模式：至少8%
+		} else {
+			minPriceDiff = 0.03 // 求购模式：至少3%
+		}
+
 		priceDiff := (forecastedPrice - currentPrice) / currentPrice
-		if priceDiff >= 0.03 {
+		if priceDiff >= minPriceDiff {
 			// 预测成功且能盈利，保留
 			filteredGoodIDs = append(filteredGoodIDs, goodID)
 			stats["filtered_passed"]++

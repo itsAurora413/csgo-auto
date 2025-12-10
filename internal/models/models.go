@@ -270,12 +270,13 @@ type ArbitrageOpportunity struct {
 	BuyOrderCount       int       `json:"buy_order_count"`          // 求购订单数量
 	SellOrderCount      int       `json:"sell_order_count"`         // 在售订单数量
 	RankNum             *int      `json:"rank_num"`                 // 热度排名（来自 /info/good 接口）
-	RecommendedBuyPrice float64   `json:"recommended_buy_price"`    // 推荐求购价格（略高于当前最高求购）
-	RecommendedQuantity int       `json:"recommended_quantity"`
-	Score               float64   `json:"score" gorm:"index"`         // 综合评分（0-100分，量化评估模型）
-	AnalysisTime        time.Time `json:"analysis_time" gorm:"index"` // 分析时间
-	CreatedAt           time.Time `json:"created_at"`
-	UpdatedAt           time.Time `json:"updated_at"`
+	RecommendedBuyPrice  float64   `json:"recommended_buy_price"`      // 推荐求购价格（略高于当前最高求购）
+	RecommendedQuantity  int       `json:"recommended_quantity"`
+	PredictionConfidence float64   `json:"prediction_confidence"`      // 预测置信度（0-1，机器学习模型给出）
+	Score                float64   `json:"score" gorm:"index"`         // 综合评分（0-100分，量化评估模型）
+	AnalysisTime         time.Time `json:"analysis_time" gorm:"index"` // 分析时间
+	CreatedAt            time.Time `json:"created_at"`
+	UpdatedAt            time.Time `json:"updated_at"`
 }
 
 // ArbitrageOpportunityHistory 套利机会历史归档

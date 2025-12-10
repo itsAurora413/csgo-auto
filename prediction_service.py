@@ -42,6 +42,10 @@ DB_CONFIG = {
     'charset': 'utf8mb4'
 }
 
+# 配置参数
+MAX_PRICE_LIMIT = 100  # 最高价格限制：只看100块钱以下的饰品
+MIN_PRICE_LIMIT = 2    # 最低价格限制
+
 CACHE_DIR = Path('/Users/user/Downloads/csgoAuto/.cache')
 CACHE_DIR.mkdir(exist_ok=True)
 
@@ -82,10 +86,11 @@ def fetch_historical_data(good_id, days=30):
         WHERE good_id = %s
         AND created_at >= DATE_SUB(NOW(), INTERVAL %s DAY)
         AND yyyp_buy_price > 0 AND yyyp_sell_price > 0
+        AND yyyp_sell_price <= %s AND yyyp_sell_price >= %s
         ORDER BY created_at ASC
         """
 
-        cursor.execute(query, (good_id, days))
+        cursor.execute(query, (good_id, days, MAX_PRICE_LIMIT, MIN_PRICE_LIMIT))
         results = cursor.fetchall()
         cursor.close()
 

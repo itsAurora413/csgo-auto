@@ -77,7 +77,7 @@ func IntegrateWithPredictionService() {
 	fmt.Println("═══════════════════════════════════════════════════════════\n")
 
 	goodIDs := []int64{24026, 24028, 24029, 24021, 24030}
-	results, err := predictionClient.BatchPredict(goodIDs, 7)
+	results, err := predictionClient.BatchPredict(goodIDs, 7, "bid")
 	if err != nil {
 		log.Printf("批量预测失败: %v", err)
 		return
@@ -128,7 +128,7 @@ func EnhanceArbitrageOpportunitiesWithPredictions(
 	goodIDs []int64,
 ) []PredictionEnrichedOpportunity {
 
-	results, err := client.BatchPredict(goodIDs, 7)
+	results, err := client.BatchPredict(goodIDs, 7, "bid")
 	if err != nil {
 		log.Printf("批量预测失败: %v", err)
 		return []PredictionEnrichedOpportunity{}
@@ -188,7 +188,7 @@ func TestPredictionServicePerformance(client *services.PredictionClient) {
 	fmt.Println("\n批量预测 (10 个商品)...")
 	goodIDs := []int64{24026, 24028, 24029, 24021, 24030, 24026, 24028, 24029, 24021, 24030}
 	start = time.Now()
-	_, _ = client.BatchPredict(goodIDs, 7)
+	_, _ = client.BatchPredict(goodIDs, 7, "bid")
 	batchDuration := time.Since(start)
 	fmt.Printf("  耗时: %v\n", batchDuration)
 	fmt.Printf("  平均每个商品: %v\n", batchDuration/time.Duration(len(goodIDs)))

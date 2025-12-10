@@ -174,9 +174,13 @@ func (pr *PredictionResult) GetXGBoostForecast() ([]float64, error) {
 }
 
 // BatchPredict 批量预测
-func (pc *PredictionClient) BatchPredict(goodIDs []int64, days int) (map[int64]*PredictionResult, error) {
+func (pc *PredictionClient) BatchPredict(goodIDs []int64, days int, mode string) (map[int64]*PredictionResult, error) {
 	if len(goodIDs) == 0 || len(goodIDs) > 100 {
 		return nil, fmt.Errorf("商品数必须在 1-100 之间, 收到: %d", len(goodIDs))
+	}
+
+	if mode == "" {
+		mode = "bid" // 默认求购模式
 	}
 
 	url := fmt.Sprintf("%s/api/batch-predict", pc.baseURL)
@@ -184,6 +188,7 @@ func (pc *PredictionClient) BatchPredict(goodIDs []int64, days int) (map[int64]*
 	requestBody := map[string]interface{}{
 		"good_ids": goodIDs,
 		"days":     days,
+		"mode":     mode,
 	}
 
 	jsonBody, err := json.Marshal(requestBody)
