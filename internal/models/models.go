@@ -255,22 +255,23 @@ type YouPinPriceSnapshot struct {
 
 // ArbitrageOpportunity 套利机会分析结果
 type ArbitrageOpportunity struct {
-	ID                  uint      `json:"id" gorm:"primaryKey"`
-	GoodID              int64     `json:"good_id" gorm:"index;not null"`
-	GoodName            string    `json:"good_name"`
-	CurrentBuyPrice     float64   `json:"current_buy_price"`        // 当前悠悠有品求购价
-	CurrentSellPrice    float64   `json:"current_sell_price"`       // 当前悠悠有品售价
-	ProfitRate          float64   `json:"profit_rate" gorm:"index"` // 预期利润率
-	EstimatedProfit     float64   `json:"estimated_profit"`         // 预期利润金额
-	AvgBuyPrice7d       float64   `json:"avg_buy_price_7d"`         // 7天平均求购价
-	AvgSellPrice7d      float64   `json:"avg_sell_price_7d"`        // 7天平均售价
-	PriceTrend          string    `json:"price_trend"`              // 价格趋势: up/down/stable
-	DaysOfData          int       `json:"days_of_data"`             // 拥有多少天的历史数据
-	RiskLevel           string    `json:"risk_level" gorm:"index"`  // 风险等级: low/medium/high
-	BuyOrderCount       int       `json:"buy_order_count"`          // 求购订单数量
-	SellOrderCount      int       `json:"sell_order_count"`         // 在售订单数量
-	RankNum             *int      `json:"rank_num"`                 // 热度排名（来自 /info/good 接口）
-	RecommendedBuyPrice  float64   `json:"recommended_buy_price"`      // 推荐求购价格（略高于当前最高求购）
+	ID                   uint      `json:"id" gorm:"primaryKey"`
+	BatchID              string    `json:"batch_id" gorm:"index;not null"` // 批次ID（格式：20241210_090000）
+	GoodID               int64     `json:"good_id" gorm:"index;not null"`
+	GoodName             string    `json:"good_name"`
+	CurrentBuyPrice      float64   `json:"current_buy_price"`        // 当前悠悠有品求购价
+	CurrentSellPrice     float64   `json:"current_sell_price"`       // 当前悠悠有品售价
+	ProfitRate           float64   `json:"profit_rate" gorm:"index"` // 预期利润率
+	EstimatedProfit      float64   `json:"estimated_profit"`         // 预期利润金额
+	AvgBuyPrice7d        float64   `json:"avg_buy_price_7d"`         // 7天平均求购价
+	AvgSellPrice7d       float64   `json:"avg_sell_price_7d"`        // 7天平均售价
+	PriceTrend           string    `json:"price_trend"`              // 价格趋势: up/down/stable
+	DaysOfData           int       `json:"days_of_data"`             // 拥有多少天的历史数据
+	RiskLevel            string    `json:"risk_level" gorm:"index"`  // 风险等级: low/medium/high
+	BuyOrderCount        int       `json:"buy_order_count"`          // 求购订单数量
+	SellOrderCount       int       `json:"sell_order_count"`         // 在售订单数量
+	RankNum              *int      `json:"rank_num"`                 // 热度排名（来自 /info/good 接口）
+	RecommendedBuyPrice  float64   `json:"recommended_buy_price"`    // 推荐求购价格（略高于当前最高求购）
 	RecommendedQuantity  int       `json:"recommended_quantity"`
 	PredictionConfidence float64   `json:"prediction_confidence"`      // 预测置信度（0-1，机器学习模型给出）
 	Score                float64   `json:"score" gorm:"index"`         // 综合评分（0-100分，量化评估模型）
@@ -282,6 +283,7 @@ type ArbitrageOpportunity struct {
 // ArbitrageOpportunityHistory 套利机会历史归档
 type ArbitrageOpportunityHistory struct {
 	ID                  uint      `json:"id" gorm:"primaryKey"`
+	BatchID             string    `json:"batch_id" gorm:"index;not null"` // 批次ID（格式：20241210_090000）
 	GoodID              int64     `json:"good_id" gorm:"index;not null"`
 	GoodName            string    `json:"good_name"`
 	CurrentBuyPrice     float64   `json:"current_buy_price"`

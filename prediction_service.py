@@ -35,7 +35,7 @@ logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 logger = logging.getLogger(__name__)
 
 DB_CONFIG = {
-    'host': '23.254.215.66',
+    'host': '192.3.81.194',
     'user': 'root',
     'password': 'Wyj250413.',
     'database': 'csgo_trader',

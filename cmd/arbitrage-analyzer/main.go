@@ -1,25 +1,27 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"csgo-trader/internal/database"
 	"csgo-trader/internal/models"
 	"csgo-trader/internal/services"
 	"csgo-trader/internal/services/youpin"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"math"
+	"net/http"
+	"os"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
-
-	"encoding/json"
-	"os"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/xuri/excelize/v2"
 	"gorm.io/gorm"
@@ -40,6 +42,7 @@ var (
 	dbURL              = flag.String("db", "", "数据库连接字符串")
 	backtest           = flag.Bool("backtest", false, "回测模式：使用7天前的预测对比实际收益")
 	backtestDays       = flag.Int("backtest-days", 7, "回测天数（默认7天）")
+	backtestBatchID    = flag.String("backtest-batch", "", "指定回测的批次ID（格式：20241210_090530），为空时回测所有批次")
 	ypTimeoutSec       = flag.Int("yp-timeout", 20, "YouPin接口调用超时(秒)，默认20s")
 	concurrency        = flag.Int("concurrency", 10, "并发线程数（默认10，用于加速商品分析）")
 	autoPurchase       = flag.Bool("auto-purchase", false, "验证通过后自动实时下单求购（默认关闭）")
@@ -887,137 +890,99 @@ type BacktestResult struct {
 	Quantity            int     // 推荐数量
 }
 
-// runBacktest 回测函数：验证N天前的预测准确度
+// runBacktest 回测函数：调用Python回测引擎API
 func runBacktest(db *gorm.DB) {
 	log.Printf("[回测分析] ==================== 开始回测分析 ====================")
 	log.Printf("[回测分析] 回测天数: %d天", *backtestDays)
+	log.Printf("[回测分析] 使用Python增强回测引擎")
 
-	// 计算N天前的时间范围
-	targetDate := time.Now().AddDate(0, 0, -*backtestDays)
-	// 找到当天的分析记录（允许±12小时误差）
-	startTime := targetDate.Add(-12 * time.Hour)
-	endTime := targetDate.Add(12 * time.Hour)
+	// 调用Python回测API
+	apiURL := "http://localhost:5002/api/backtest/run"
 
-	log.Printf("[回测分析] 查询时间范围: %s ~ %s",
-		startTime.Format("2006-01-02 15:04:05"),
-		endTime.Format("2006-01-02 15:04:05"))
+	// 构造请求体
+	requestBody := map[string]interface{}{
+		"backtest_days":   *backtestDays,
+		"commission_rate": 0.01,
+		"limit":           100,
+	}
 
-	// 1. 从历史归档表查询N天前的套利机会（只取推荐的商品，即有推荐数量的）
-	var historicalOpportunities []models.ArbitrageOpportunity
-	if err := db.Table("arbitrage_opportunities_history").
-		Where("analysis_time >= ? AND analysis_time <= ? AND recommended_quantity > 0", startTime, endTime).
-		Order("analysis_time DESC").
-		Limit(50). // 只取前50个推荐
-		Find(&historicalOpportunities).Error; err != nil {
-		log.Printf("[回测分析] 查询历史数据失败: %v", err)
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		log.Printf("[回测分析] ❌ 构造请求失败: %v", err)
 		return
 	}
 
-	if len(historicalOpportunities) == 0 {
-		log.Printf("[回测分析] 未找到%d天前的推荐数据，可能当时未运行分析", *backtestDays)
-		log.Printf("[回测分析] 提示: 请确保数据库中有至少%d天前的 arbitrage_opportunities 记录", *backtestDays)
+	// 发送POST请求
+	log.Printf("[回测分析] 正在调用Python回测引擎API...")
+	resp, err := http.Post(apiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		log.Printf("[回测分析] ❌ 调用回测API失败: %v", err)
+		log.Printf("[回测分析] 提示: 请先启动Python回测服务: python3 backtest_engine.py")
+		return
+	}
+	defer resp.Body.Close()
+
+	// 读取响应
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("[回测分析] ❌ 读取响应失败: %v", err)
 		return
 	}
 
-	log.Printf("[回测分析] 找到 %d 条历史推荐记录", len(historicalOpportunities))
-	actualAnalysisTime := historicalOpportunities[0].AnalysisTime
-	log.Printf("[回测分析] 实际分析时间: %s", actualAnalysisTime.Format("2006-01-02 15:04:05"))
-
-	// 2. 获取这些商品今天的最新价格
-	goodIDs := []int64{}
-	for _, opp := range historicalOpportunities {
-		goodIDs = append(goodIDs, opp.GoodID)
-	}
-
-	// 查询今天的最新快照
-	todaySnapshots := make(map[int64]*models.CSQAQGoodSnapshot)
-	var snapshots []models.CSQAQGoodSnapshot
-	if err := db.Where("good_id IN ?", goodIDs).
-		Order("created_at DESC").
-		Find(&snapshots).Error; err != nil {
-		log.Printf("[回测分析] 查询今日价格失败: %v", err)
+	// 解析响应
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		log.Printf("[回测分析] ❌ 解析响应失败: %v", err)
+		log.Printf("[回测分析] 响应内容: %s", string(body))
 		return
 	}
 
-	// 按商品ID分组，取最新的一条
-	for i := range snapshots {
-		snapshot := &snapshots[i]
-		if _, exists := todaySnapshots[snapshot.GoodID]; !exists {
-			todaySnapshots[snapshot.GoodID] = snapshot
+	// 检查状态
+	if status, ok := result["status"].(string); ok && status == "success" {
+		log.Printf("[回测分析] ✅ 回测完成！")
+
+		// 显示摘要信息
+		if summary, ok := result["summary"].(map[string]interface{}); ok {
+			log.Printf("\n[回测摘要] ==================== 核心指标 ====================")
+			if sampleCount, ok := summary["样本数量"].(float64); ok {
+				log.Printf("📊 样本数量: %.0f 个", sampleCount)
+			}
+			if totalInvestment, ok := summary["总投资金额"].(float64); ok {
+				log.Printf("💰 总投资: ¥%.2f", totalInvestment)
+			}
+			if successRate, ok := summary["成功率"].(float64); ok {
+				log.Printf("✅ 成功率: %.1f%%", successRate)
+			}
+		}
+
+		// 显示报告路径
+		if htmlReport, ok := result["html_report"].(string); ok {
+			log.Printf("\n[回测报告] 📄 HTML报告: %s", htmlReport)
+			log.Printf("[回测报告] 💡 提示: 用浏览器打开HTML报告查看详细分析和可视化图表")
+		}
+
+		if jsonResult, ok := result["json_result"].(string); ok {
+			log.Printf("[回测报告] 📊 JSON数据: %s", jsonResult)
+		}
+
+		log.Printf("\n[回测分析] ==================== 回测完成 ====================")
+	} else {
+		log.Printf("[回测分析] ❌ 回测失败")
+		if errMsg, ok := result["error"].(string); ok {
+			log.Printf("[回测分析] 错误信息: %s", errMsg)
 		}
 	}
-
-	log.Printf("[回测分析] 成功获取 %d 个商品的今日价格", len(todaySnapshots))
-
-	// 3. 对比预测和实际结果
-	results := []BacktestResult{}
-	for _, histOpp := range historicalOpportunities {
-		todaySnapshot, exists := todaySnapshots[histOpp.GoodID]
-		if !exists || todaySnapshot.YYYPBuyPrice == nil || todaySnapshot.YYYPSellPrice == nil {
-			continue // 跳过没有今日数据的商品
-		}
-
-		// 预测值（N天前的预测）
-		predictedBuyPrice := histOpp.RecommendedBuyPrice
-		predictedSellPrice := histOpp.CurrentSellPrice
-		predictedProfit := (predictedSellPrice*0.99 - predictedBuyPrice) * float64(histOpp.RecommendedQuantity)
-		predictedProfitRate := histOpp.ProfitRate
-
-		// 实际值（按N天前的买入价，今天的卖出价计算）
-		actualBuyPrice := histOpp.RecommendedBuyPrice // 实际买入价就是当时推荐的价格
-		actualSellPrice := *todaySnapshot.YYYPSellPrice
-		actualProfit := (actualSellPrice*0.99 - actualBuyPrice) * float64(histOpp.RecommendedQuantity)
-		actualProfitRate := 0.0
-		if actualBuyPrice > 0 {
-			actualProfitRate = (actualSellPrice*0.99 - actualBuyPrice) / actualBuyPrice
-		}
-
-		// 价格变化率
-		priceChangeRate := 0.0
-		if predictedSellPrice > 0 {
-			priceChangeRate = (actualSellPrice - predictedSellPrice) / predictedSellPrice
-		}
-
-		// 利润准确度
-		profitAccuracy := 0.0
-		if predictedProfit > 0 {
-			profitAccuracy = actualProfit / predictedProfit
-		}
-
-		result := BacktestResult{
-			GoodID:              histOpp.GoodID,
-			GoodName:            histOpp.GoodName,
-			PredictedBuyPrice:   predictedBuyPrice,
-			PredictedSellPrice:  predictedSellPrice,
-			PredictedProfit:     predictedProfit,
-			PredictedProfitRate: predictedProfitRate,
-			ActualBuyPrice:      actualBuyPrice,
-			ActualSellPrice:     actualSellPrice,
-			ActualProfit:        actualProfit,
-			ActualProfitRate:    actualProfitRate,
-			PriceChangeRate:     priceChangeRate,
-			IsSuccessful:        actualProfit > 0,
-			ProfitAccuracy:      profitAccuracy,
-			Quantity:            histOpp.RecommendedQuantity,
-		}
-
-		results = append(results, result)
-	}
-
-	log.Printf("[回测分析] 成功计算 %d 个商品的回测结果", len(results))
-
-	// 4. 统计和输出报告
-	printBacktestReport(results, actualAnalysisTime)
 }
 
 // printBacktestReport 打印回测报告
-func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
+func printBacktestReport(results []BacktestResult, analysisTime time.Time, batchID string) {
 	if len(results) == 0 {
 		log.Printf("[回测报告] 没有可用的回测数据")
 		return
 	}
 
 	log.Printf("\n[回测报告] ==================== 回测准确度分析 ====================")
+	log.Printf("[回测报告] 批次ID: %s", batchID)
 	log.Printf("[回测报告] 原始分析时间: %s", analysisTime.Format("2006-01-02 15:04:05"))
 	log.Printf("[回测报告] 今日时间: %s", time.Now().Format("2006-01-02 15:04:05"))
 	log.Printf("[回测报告] 回测周期: %d天", *backtestDays)
@@ -1102,6 +1067,7 @@ func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
 
 	// === 生成回测结果 JSON 文件 ===
 	backtestJSON := map[string]interface{}{
+		"batch_id":      batchID,
 		"timestamp":     time.Now().Format("2006-01-02 15:04:05"),
 		"analysis_time": analysisTime.Format("2006-01-02 15:04:05"),
 		"summary": map[string]interface{}{
@@ -1120,8 +1086,10 @@ func printBacktestReport(results []BacktestResult, analysisTime time.Time) {
 	}
 
 	jsonBytes, _ := json.MarshalIndent(backtestJSON, "", "  ")
-	os.WriteFile("backtest_result.json", jsonBytes, 0644)
-	log.Printf("[输出] 回测结果已保存到: backtest_result.json")
+	// 使用批次ID作为文件名的一部分
+	filename := fmt.Sprintf("backtest_result_%s.json", batchID)
+	os.WriteFile(filename, jsonBytes, 0644)
+	log.Printf("[输出] 回测结果已保存到: %s", filename)
 
 	// === 保存策略调整日志 ===
 	SaveAdjustmentLog("strategy_adjustment_log.txt")
@@ -2056,7 +2024,10 @@ func main() {
 func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 	startTime := time.Now()
 	analysisTime := startTime
+	// 生成批次ID（格式：20241210_090530）
+	batchID := analysisTime.Format("20060102_150405")
 	log.Printf("[套利分析] ==================== 开始新一轮分析 ====================")
+	log.Printf("[套利分析] 批次ID: %s", batchID)
 	log.Printf("[套利分析] 分析时间: %s", analysisTime.Format("2006-01-02 15:04:05"))
 	log.Printf("[套利分析] 分析方法: 集成预测模型 (Prophet + XGBoost + LinearRegression)")
 
@@ -2776,6 +2747,7 @@ func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
 		recommendedQuantity := 0
 
 		opportunity := models.ArbitrageOpportunity{
+			BatchID:              batchID,
 			GoodID:               candidate.good.GoodID,
 			GoodName:             candidate.good.Name,
 			CurrentBuyPrice:      currentBuyPrice,
@@ -3730,6 +3702,7 @@ func archiveCurrentOpportunities(db *gorm.DB) error {
 	hist := make([]models.ArbitrageOpportunityHistory, 0, len(curr))
 	for _, r := range curr {
 		hist = append(hist, models.ArbitrageOpportunityHistory{
+			BatchID:             r.BatchID,
 			GoodID:              r.GoodID,
 			GoodName:            r.GoodName,
 			CurrentBuyPrice:     r.CurrentBuyPrice,
