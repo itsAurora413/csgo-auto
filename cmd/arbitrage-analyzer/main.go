@@ -43,10 +43,14 @@ var (
 	backtest           = flag.Bool("backtest", false, "回测模式：使用7天前的预测对比实际收益")
 	backtestDays       = flag.Int("backtest-days", 7, "回测天数（默认7天）")
 	backtestBatchID    = flag.String("backtest-batch", "", "指定回测的批次ID（格式：20241210_090530），为空时回测所有批次")
-	ypTimeoutSec       = flag.Int("yp-timeout", 20, "YouPin接口调用超时(秒)，默认20s")
-	concurrency        = flag.Int("concurrency", 10, "并发线程数（默认10，用于加速商品分析）")
-	autoPurchase       = flag.Bool("auto-purchase", false, "验证通过后自动实时下单求购（默认关闭）")
-	onlyBottomRebound  = flag.Bool("only-bottom", false, "只看能抄底的饰品：前期下跌+当前反弹（默认关闭，关闭时为全量分析）")
+	// ===== 守护进程模式参数 =====
+	daemon            = flag.Bool("daemon", false, "守护进程模式：持续运行，定时执行分析和回测")
+	analysisInterval  = flag.Int("analysis-interval", 2, "套利分析间隔（小时），默认2小时")
+	backtestTime      = flag.String("backtest-time", "10:00", "每日回测执行时间（格式：HH:MM），默认10:00")
+	ypTimeoutSec      = flag.Int("yp-timeout", 20, "YouPin接口调用超时(秒)，默认20s")
+	concurrency       = flag.Int("concurrency", 10, "并发线程数（默认10，用于加速商品分析）")
+	autoPurchase      = flag.Bool("auto-purchase", false, "验证通过后自动实时下单求购（默认关闭）")
+	onlyBottomRebound = flag.Bool("only-bottom", false, "只看能抄底的饰品：前期下跌+当前反弹（默认关闭，关闭时为全量分析）")
 	// ===== 新增：扫货模式参数 =====
 	scanMarketMode    = flag.Bool("scan-market", false, "扫货模式：直接从市场购买预测7天后能盈利的饰品（风险更高，无价差保底，要求更严格）")
 	scanMinProfitRate = flag.Float64("scan-min-profit", 0.12, "扫货模式最小利润率（默认12%，因为没有价差保底需要更高要求）")
@@ -2009,6 +2013,9 @@ func main() {
 	if *backtest {
 		// 回测模式
 		runBacktest(db)
+	} else if *daemon {
+		// 守护进程模式
+		runDaemon(db, predictionClient)
 	} else if *once {
 		// 只运行一次
 		runAnalysis(db, predictionClient)
@@ -2019,6 +2026,242 @@ func main() {
 			log.Printf("[套利分析器] 本轮分析完成，立即开始下一轮分析...")
 		}
 	}
+}
+
+// 守护进程模式：定时执行分析和回测
+func runDaemon(db *gorm.DB, predictionClient *services.PredictionClient) {
+	log.Printf("[守护进程] ==================== 守护进程模式启动 ====================")
+	log.Printf("[守护进程] 套利分析间隔: %d 小时", *analysisInterval)
+	log.Printf("[守护进程] 每日回测时间: %s", *backtestTime)
+	log.Printf("[守护进程] 预算: ¥%.2f", *budget)
+
+	// 解析回测时间
+	backtestHour, backtestMin, err := parseBacktestTime(*backtestTime)
+	if err != nil {
+		log.Fatalf("[守护进程] 回测时间格式错误: %v", err)
+	}
+
+	// 回测执行标记（防止一分钟内重复执行）
+	backtestDoneToday := false
+	lastBacktestDate := ""
+
+	// 立即执行一次分析
+	log.Printf("[守护进程] 立即执行首次套利分析...")
+	executeAnalysisWithResult(db, predictionClient)
+
+	// 启动套利分析定时器
+	analysisTicker := time.NewTicker(time.Duration(*analysisInterval) * time.Hour)
+	defer analysisTicker.Stop()
+
+	// 启动回测检查定时器（每分钟检查一次）
+	backtestChecker := time.NewTicker(1 * time.Minute)
+	defer backtestChecker.Stop()
+
+	log.Printf("[守护进程] 定时器已启动，等待下一次执行...")
+	log.Printf("[守护进程] 下次分析时间: %s", time.Now().Add(time.Duration(*analysisInterval)*time.Hour).Format("2006-01-02 15:04:05"))
+
+	// 主循环
+	for {
+		select {
+		case <-analysisTicker.C:
+			log.Printf("\n[守护进程] ==================== 触发定时套利分析 ====================")
+			log.Printf("[守护进程] 当前时间: %s", time.Now().Format("2006-01-02 15:04:05"))
+			executeAnalysisWithResult(db, predictionClient)
+			log.Printf("[守护进程] 下次分析时间: %s", time.Now().Add(time.Duration(*analysisInterval)*time.Hour).Format("2006-01-02 15:04:05"))
+
+		case <-backtestChecker.C:
+			now := time.Now()
+			currentDate := now.Format("2006-01-02")
+
+			// 检查是否到达回测时间
+			if now.Hour() == backtestHour && now.Minute() == backtestMin {
+				// 检查今天是否已执行
+				if currentDate != lastBacktestDate {
+					log.Printf("\n[守护进程] ==================== 触发定时回测 ====================")
+					log.Printf("[守护进程] 当前时间: %s", now.Format("2006-01-02 15:04:05"))
+					executeBacktest(db)
+					lastBacktestDate = currentDate
+					backtestDoneToday = true
+					log.Printf("[守护进程] 回测完成，明日 %s 再次执行", *backtestTime)
+				}
+			}
+
+			// 过了回测时间后重置标记
+			if now.Hour() != backtestHour && backtestDoneToday {
+				backtestDoneToday = false
+			}
+		}
+	}
+}
+
+// parseBacktestTime 解析回测时间字符串（格式：HH:MM）
+func parseBacktestTime(timeStr string) (hour int, minute int, err error) {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		return 0, 0, fmt.Errorf("时间格式错误，应为 HH:MM，实际: %s", timeStr)
+	}
+
+	hour, err = strconv.Atoi(parts[0])
+	if err != nil || hour < 0 || hour > 23 {
+		return 0, 0, fmt.Errorf("小时值无效: %s", parts[0])
+	}
+
+	minute, err = strconv.Atoi(parts[1])
+	if err != nil || minute < 0 || minute > 59 {
+		return 0, 0, fmt.Errorf("分钟值无效: %s", parts[1])
+	}
+
+	return hour, minute, nil
+}
+
+// executeAnalysisWithResult 执行分析并返回结果
+func executeAnalysisWithResult(db *gorm.DB, predictionClient *services.PredictionClient) *AnalysisResult {
+	startTime := time.Now()
+
+	// 执行分析
+	runAnalysis(db, predictionClient)
+
+	duration := time.Since(startTime)
+	log.Printf("[守护进程] 本次分析耗时: %.2f 分钟", duration.Minutes())
+
+	// 从数据库查询最新的分析结果
+	result := loadLatestAnalysisResult(db)
+
+	// 保存结果到JSON文件
+	if result != nil {
+		saveAnalysisResultToJSON(result)
+	}
+
+	return result
+}
+
+// executeBacktest 执行回测
+func executeBacktest(db *gorm.DB) {
+	startTime := time.Now()
+
+	// 调用回测函数
+	runBacktest(db)
+
+	duration := time.Since(startTime)
+	log.Printf("[守护进程] 本次回测耗时: %.2f 秒", duration.Seconds())
+}
+
+// AnalysisResult 分析结果结构
+type AnalysisResult struct {
+	Timestamp       time.Time            `json:"timestamp"`
+	BatchID         string               `json:"batch_id"`
+	TotalBudget     float64              `json:"total_budget"`
+	TotalItems      int                  `json:"total_items"`
+	TotalCost       float64              `json:"total_cost"`
+	ExpectedProfit  float64              `json:"expected_profit"`
+	ExpectedROI     float64              `json:"expected_roi"`
+	Recommendations []RecommendationItem `json:"recommendations"`
+}
+
+// RecommendationItem 推荐商品
+type RecommendationItem struct {
+	GoodID     int64   `json:"good_id"`
+	GoodName   string  `json:"good_name"`
+	BuyPrice   float64 `json:"buy_price"`
+	SellPrice  float64 `json:"sell_price"`
+	Quantity   int     `json:"quantity"`
+	Subtotal   float64 `json:"subtotal"`
+	ProfitRate float64 `json:"profit_rate"`
+	RiskLevel  string  `json:"risk_level"`
+	Score      float64 `json:"score"`
+}
+
+// loadLatestAnalysisResult 从数据库加载最新的分析结果
+func loadLatestAnalysisResult(db *gorm.DB) *AnalysisResult {
+	// 查询最新批次的套利机会
+	var opportunities []models.ArbitrageOpportunity
+	if err := db.Where("recommended_quantity > 0").
+		Order("analysis_time DESC").
+		Limit(100).
+		Find(&opportunities).Error; err != nil {
+		log.Printf("[守护进程] 查询分析结果失败: %v", err)
+		return nil
+	}
+
+	if len(opportunities) == 0 {
+		log.Printf("[守护进程] 没有找到推荐商品")
+		return nil
+	}
+
+	// 构建结果
+	result := &AnalysisResult{
+		Timestamp:       opportunities[0].AnalysisTime,
+		BatchID:         opportunities[0].BatchID,
+		TotalBudget:     *budget,
+		TotalItems:      0,
+		TotalCost:       0,
+		ExpectedProfit:  0,
+		Recommendations: make([]RecommendationItem, 0),
+	}
+
+	// 只取同一批次的
+	batchID := opportunities[0].BatchID
+	for _, opp := range opportunities {
+		if opp.BatchID != batchID {
+			break
+		}
+
+		subtotal := opp.RecommendedBuyPrice * float64(opp.RecommendedQuantity)
+		profit := opp.EstimatedProfit * float64(opp.RecommendedQuantity)
+
+		result.TotalItems += opp.RecommendedQuantity
+		result.TotalCost += subtotal
+		result.ExpectedProfit += profit
+
+		result.Recommendations = append(result.Recommendations, RecommendationItem{
+			GoodID:     opp.GoodID,
+			GoodName:   opp.GoodName,
+			BuyPrice:   opp.RecommendedBuyPrice,
+			SellPrice:  opp.CurrentSellPrice,
+			Quantity:   opp.RecommendedQuantity,
+			Subtotal:   subtotal,
+			ProfitRate: opp.ProfitRate,
+			RiskLevel:  opp.RiskLevel,
+			Score:      opp.Score,
+		})
+	}
+
+	if result.TotalCost > 0 {
+		result.ExpectedROI = result.ExpectedProfit / result.TotalCost
+	}
+
+	return result
+}
+
+// saveAnalysisResultToJSON 保存分析结果到JSON文件
+func saveAnalysisResultToJSON(result *AnalysisResult) {
+	if result == nil {
+		return
+	}
+
+	// 生成文件名
+	filename := fmt.Sprintf("analysis_result_%s.json", result.Timestamp.Format("20060102_150405"))
+	filepath := fmt.Sprintf("/root/analysis_results/%s", filename)
+
+	// 确保目录存在
+	os.MkdirAll("/root/analysis_results", 0755)
+
+	// 序列化JSON
+	jsonData, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		log.Printf("[守护进程] JSON序列化失败: %v", err)
+		return
+	}
+
+	// 写入文件
+	if err := os.WriteFile(filepath, jsonData, 0644); err != nil {
+		log.Printf("[守护进程] 保存JSON失败: %v", err)
+		return
+	}
+
+	log.Printf("[守护进程] 📄 分析结果已保存: %s", filepath)
+	log.Printf("[守护进程] 📊 推荐商品: %d 件，总成本: ¥%.2f，预期利润: ¥%.2f (ROI: %.2f%%)",
+		result.TotalItems, result.TotalCost, result.ExpectedProfit, result.ExpectedROI*100)
 }
 
 func runAnalysis(db *gorm.DB, predictionClient *services.PredictionClient) {
